@@ -49,7 +49,7 @@ def load_mvp_voting() -> pd.DataFrame:
 TRADITIONAL_COLS = [
     "PLAYER_ID", "PLAYER_NAME", "TEAM_ABBREVIATION", "AGE", "SEASON",
     "GP", "MIN", "PTS", "REB", "AST", "STL", "BLK", "TOV",
-    "FG_PCT", "FG3_PCT", "FT_PCT", "PLUS_MINUS",
+    "FG_PCT", "FG3_PCT", "FT_PCT", "PLUS_MINUS", "W_PCT",
 ]
 ADV_COLS = ["PLAYER_ID", "SEASON", "TS_PCT", "USG_PCT", "PIE", "OFF_RATING", "DEF_RATING", "NET_RATING"]
 USAGE_COLS = ["PLAYER_ID", "SEASON", "PCT_PTS", "PCT_AST", "PCT_REB"]
@@ -111,6 +111,14 @@ def main():
         print("Controlla la normalizzazione dei nomi per queste righe.\n")
 
     merged = merged[merged["PLAYER_ID"].notna()].copy()
+
+    # PTS/AST/STL/BLK esistono in entrambe le fonti (voto MVP e stats), quindi
+    # il merge le ha suffissate _mvp/_stats. Teniamo solo la versione _stats
+    # (nba_stats_repo), piu' completa e affidabile della colonna raccolta da
+    # Basketball-Reference, che e' vuota per molte stagioni piu' vecchie.
+    DUPLICATED_STATS = ["PTS", "AST", "STL", "BLK"]
+    merged = merged.drop(columns=[f"{c}_mvp" for c in DUPLICATED_STATS])
+    merged = merged.rename(columns={f"{c}_stats": c for c in DUPLICATED_STATS})
 
     # Filtro dalla proposal: MIN >= 20, GP >= 41
     merged["MIN"] = pd.to_numeric(merged["MIN"], errors="coerce")

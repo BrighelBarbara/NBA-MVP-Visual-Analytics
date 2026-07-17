@@ -32,6 +32,7 @@ from sklearn.preprocessing import StandardScaler
 PROCESSED = Path(__file__).resolve().parents[1] / "processed"
 INPUT_FILE = PROCESSED / "mvp_candidates_final.csv"
 OUTPUT_FILE = PROCESSED / "pca_result.json"
+LOADINGS_FILE = PROCESSED / "pca_loadings.json"
 
 # Le statistiche numeriche usate come input della PCA.
 # Scelte per rappresentare: produzione offensiva, difesa, efficienza,
@@ -41,7 +42,7 @@ OUTPUT_FILE = PROCESSED / "pca_result.json"
 # invece di descrivere il merito statistico -- punto chiave da
 # giustificare nel report.
 FEATURE_COLS = [
-    "MIN", "PTS_stats", "REB", "AST_stats", "STL_stats", "BLK_stats", "TOV",
+    "MIN", "PTS", "REB", "AST", "STL", "BLK", "TOV",
     "FG_PCT", "FG3_PCT", "FT_PCT", "PLUS_MINUS",
     "TS_PCT", "USG_PCT", "PIE", "OFF_RATING", "DEF_RATING", "NET_RATING",
     "PCT_PTS", "PCT_AST", "PCT_REB",
@@ -85,25 +86,42 @@ def main():
     print(loadings["PC2_loading"].abs().sort_values(ascending=False).head(5))
 
     # 4) Esporta il risultato in JSON per il frontend
+    loadings_dict = {
+        col: {"PC1": round(float(loadings.loc[col, "PC1_loading"]), 3),
+              "PC2": round(float(loadings.loc[col, "PC2_loading"]), 3)}
+        for col in FEATURE_COLS
+    }
+
     out_records = df[META_COLS + ["PC1", "PC2"]].to_dict(orient="records")
     output = {
         "explained_variance": {
             "PC1": round(float(explained[0]), 4),
             "PC2": round(float(explained[1]), 4),
         },
-        "loadings": {
-            col: {"PC1": round(float(loadings.loc[col, "PC1_loading"]), 3),
-                  "PC2": round(float(loadings.loc[col, "PC2_loading"]), 3)}
-            for col in FEATURE_COLS
-        },
+        "loadings": loadings_dict,
         "points": out_records,
     }
 
     with open(OUTPUT_FILE, "w") as f:
         json.dump(output, f, indent=2)
 
+    # File separato coi soli loadings, usato nel report per spiegare
+    # cosa rappresentano PC1 e PC2 (senza dover caricare tutti i punti).
+    loadings_output = {
+        "explained_variance": {
+            "PC1": round(float(explained[0]), 4),
+            "PC2": round(float(explained[1]), 4),
+        },
+        "loadings": loadings_dict,
+    }
+    with open(LOADINGS_FILE, "w") as f:
+        json.dump(loadings_output, f, indent=2)
+
     print(f"\n✅ Risultato PCA salvato in: {OUTPUT_FILE}")
+    print(f"✅ Loadings salvati in: {LOADINGS_FILE}")
     print(f"   {len(out_records)} punti pronti per la scatterplot")
+    print(f"Righe: {df.shape[0]}, Colonne: {df.shape[1]}, AS Index: {df.shape[0] * df.shape[1]}")
+    print(df.columns.tolist())
 
 
 if __name__ == "__main__":
