@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA MVP Visual Analytics Explorer (1996 - 2023)</title>
+    <!-- Importazione D3.js v7 -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header class="navbar">
+        <h1>🏀 NBA MVP Visual Analytics Explorer (1996–2023)</h1>
+        <p class="subtitle">Analisi Multidimensionale, Riduzione PCA ed Evoluzione Tattica delle Votazioni MVP</p>
+    </header>
+
+    <div class="dashboard-grid">
+        <!-- QUADRANTE A: Scatterplot PCA -->
+        <section class="card" id="pca-card">
+            <h2>Spatial PCA Projection (PC1 vs PC2)</h2>
+            <p class="card-desc">Fai <strong>Brushing (seleziona un'area)</strong> per filtrare e ricalcolare l'MVP Score.</p>
+            <div id="pca-plot"></div>
+        </section>
+
+        <!-- QUADRANTE B: Parallel Coordinates Plot (PCP) -->
+        <section class="card" id="pcp-card">
+            <h2>Parallel Coordinates Plot (PCP)</h2>
+            <p class="card-desc">Fai <strong>Brushing verticale sugli assi</strong> per filtrare range specifici.</p>
+            <div id="pcp-plot"></div>
+        </section>
+
+        <!-- PANNELLO E: Sidebar Analytics -->
+        <aside class="card" id="sidebar-card">
+            <h2>Analytics & Selected Candidate</h2>
+            <div id="sidebar-content">
+                <div id="selected-player-info" class="info-box">
+                    <p><em>Seleziona un punto sulla PCA o sul PCP per vedere i dettagli e la classifica ricalcolata.</em></p>
+                </div>
+                <hr>
+                <h3>Top Dynamic MVP Score (Selection)</h3>
+                <ol id="top-mvp-list" class="ranking-list"></ol>
+            </div>
+        </aside>
+
+        <!-- QUADRANTE C: Line Chart (Serie Storica) -->
+        <section class="card" id="line-card">
+            <h2>Seasonal Evolution vs League Average</h2>
+            <div id="line-chart"></div>
+        </section>
+
+        <!-- QUADRANTE D: Box Plot Comparativo -->
+        <section class="card" id="boxplot-card">
+            <h2>Comparative Metric Distribution</h2>
+            <div id="boxplot-chart"></div>
+        </section>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
