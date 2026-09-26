@@ -56,6 +56,8 @@ Promise.all([
     renderReliabilityChart(insights);
     renderFatigueChart(insights);
     renderInsightCallout(insights);
+    renderThresholdChart(insights);
+    renderThresholdCallout(insights);
 }).catch(err => console.error("Errore nel caricamento dei dati:", err));
 
 // --- LEGENDA (colori era + marcatore vincitore MVP) ---
@@ -69,9 +71,27 @@ function renderLegend() {
         item.append("span").text(era);
     });
 
+    // Stesso raggio "esterno" (4.5px) per entrambe le icone di legenda,
+    // convertito nella size di d3.symbol richiesta da ciascuna forma (vedi
+    // nota su STAR_KA in renderPCAScatterplot).
+    const LEGEND_R = 4.5;
     const winnerItem = legend.append("div").attr("class", "legend-item");
-    winnerItem.append("span").attr("class", "legend-swatch winner-swatch");
-    winnerItem.append("span").text("Vincitore MVP reale (bordo nero)");
+    const starSvg = winnerItem.append("svg").attr("width", 14).attr("height", 14);
+    starSvg.append("path")
+        .attr("transform", "translate(7,7)")
+        .attr("d", d3.symbol().type(d3.symbolStar).size((LEGEND_R * LEGEND_R) / 0.89081309152928522810)())
+        .attr("fill", "#7f8c8d")
+        .attr("stroke", "#000")
+        .attr("stroke-width", 1.2);
+    winnerItem.append("span").text("Vincitore MVP reale (forma a stella)");
+
+    const nonWinnerItem = legend.append("div").attr("class", "legend-item");
+    const circleSvg = nonWinnerItem.append("svg").attr("width", 14).attr("height", 14);
+    circleSvg.append("path")
+        .attr("transform", "translate(7,7)")
+        .attr("d", d3.symbol().type(d3.symbolCircle).size(Math.PI * LEGEND_R * LEGEND_R)())
+        .attr("fill", "#7f8c8d");
+    nonWinnerItem.append("span").text("Candidato non vincitore (cerchio)");
 }
 
 // --- Tooltip condiviso per i grafici del modulo Insights ---
@@ -120,6 +140,23 @@ function renderPCAScatterplot(data) {
         .domain([0, d3.max(data, d => d.MVP_Share) || 1])
         .range([3, 12]);
 
+    // Codifica a FORMA per i vincitori reali (stella), non solo colore/bordo
+    // — quanto promesso nella proposal ("shape distinguishes MVP winners").
+    // d3.symbol().size() è un'AREA, non un raggio, e le due forme la
+    // convertono in modo diverso: il cerchio usa r = sqrt(size/pi), la
+    // stella usa r_esterno = sqrt(size*ka) con ka=0.8908 (costante interna
+    // di d3-shape). Per far coincidere il raggio "esterno" percepito con
+    // quello del cerchio (sizeScale), invertiamo ciascuna formula invece di
+    // riusare la stessa area per entrambe (altrimenti la stella, a parita'
+    // di area, risulta ~1.67x piu' grande in punta).
+    const STAR_KA = 0.89081309152928522810;
+    const symbolGenerator = d3.symbol()
+        .type(d => d.Is_MVP_Winner === 1 ? d3.symbolStar : d3.symbolCircle)
+        .size(d => {
+            const r = sizeScale(d.MVP_Share);
+            return d.Is_MVP_Winner === 1 ? (r * r) / STAR_KA : Math.PI * r * r;
+        });
+
     svg.append("g")
         .attr("transform", `translate(0,${height})`)
         .call(d3.axisBottom(xScale))
@@ -142,14 +179,13 @@ function renderPCAScatterplot(data) {
     const points = svg.selectAll(".point")
         .data(data)
         .enter()
-        .append("circle")
+        .append("path")
         .attr("class", "point")
-        .attr("cx", d => xScale(d.PC1))
-        .attr("cy", d => yScale(d.PC2))
-        .attr("r", d => sizeScale(d.MVP_Share))
+        .attr("transform", d => `translate(${xScale(d.PC1)},${yScale(d.PC2)})`)
+        .attr("d", symbolGenerator)
         .attr("fill", d => ERA_COLORS[d.Tactical_Era] || "#7f8c8d")
         .attr("stroke", d => d.Is_MVP_Winner === 1 ? "#000" : "none")
-        .attr("stroke-width", d => d.Is_MVP_Winner === 1 ? 2 : 0)
+        .attr("stroke-width", d => d.Is_MVP_Winner === 1 ? 1.5 : 0)
         .attr("opacity", 0.85);
 
     const brush = d3.brush()
@@ -168,6 +204,22 @@ function renderPCAScatterplot(data) {
 
     function brushed(event) {
         if (!event.selection) {
+            // Nessuna area trascinata: se è stato un click (non un drag), il
+            // brush non genera comunque coordinate utilizzabili da solo, ma
+            // l'overlay del brush intercetta comunque il click prima dei
+            // cerchi sottostanti (pointer-events:all) — quindi cerchiamo qui
+            // il candidato più vicino al punto cliccato e lo selezioniamo.
+            if (event.sourceEvent) {
+                const [mx, my] = d3.pointer(event.sourceEvent, this);
+                const clicked = findNearestPoint(data, xScale, yScale, mx, my, 15);
+                if (clicked) {
+                    d3.selectAll(".fatigue-bar").classed("selected", false);
+                    selectCandidate(clicked);
+                    return;
+                }
+            }
+
+            resetCandidateFocus();
             points.classed("dimmed", false);
             d3.selectAll(".polyline").classed("dimmed", false);
             renderLineChart(globalData);
@@ -175,6 +227,8 @@ function renderPCAScatterplot(data) {
             updateSidebar(globalData.slice(0, 5), false);
             return;
         }
+
+        resetCandidateFocus();
 
         const [[x0, y0], [x1, y1]] = event.selection;
 
@@ -200,6 +254,23 @@ function renderPCAScatterplot(data) {
             computeDynamicMVPScore(selected);
         }
     }
+}
+
+// Trova il candidato più vicino a un punto (mx,my) nello spazio della PCA,
+// entro una tolleranza in pixel. Usata dal click-to-select (vedi brushed()).
+function findNearestPoint(data, xScale, yScale, mx, my, maxDist) {
+    let nearest = null;
+    let minDist = Infinity;
+    data.forEach(d => {
+        const dx = xScale(d.PC1) - mx;
+        const dy = yScale(d.PC2) - my;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < minDist) {
+            minDist = dist;
+            nearest = d;
+        }
+    });
+    return minDist <= maxDist ? nearest : null;
 }
 
 // --- 2. QUADRANTE B: PARALLEL COORDINATES PLOT (PCP) ---
@@ -246,7 +317,11 @@ function renderParallelCoordinates(data) {
         .attr("class", "polyline")
         .attr("d", path)
         .attr("stroke", d => ERA_COLORS[d.Tactical_Era] || "#34495e")
-        .attr("opacity", 0.3);
+        .attr("opacity", 0.3)
+        .on("click", (_event, d) => {
+            d3.selectAll(".fatigue-bar").classed("selected", false);
+            selectCandidate(d);
+        });
 
     // Disegna gli assi verticali
     const axesG = svg.selectAll(".axis")
@@ -377,12 +452,15 @@ function renderLineChart(data) {
 
 // --- 4. QUADRANTE D: BOX PLOT (DISTRIBUZIONE PER ERA) ---
 function renderBoxPlot(data) {
+    d3.select("#boxplot-title").text("Comparative Metric Distribution");
+    d3.select("#boxplot-desc").html("Distribuzione dei Punti (PTS) per era, sulla selezione corrente.");
+
     const container = d3.select("#boxplot-chart");
     container.selectAll("*").remove();
 
     const margin = { top: 20, right: 20, bottom: 40, left: 40 };
     const width = container.node().getBoundingClientRect().width - margin.left - margin.right;
-    const height = 240 - margin.top - margin.bottom;
+    const height = 215 - margin.top - margin.bottom;
 
     const svg = container.append("svg")
         .attr("width", width + margin.left + margin.right)
@@ -469,6 +547,140 @@ function updateSidebar(topPlayers, isSelectionActive, extraNoteHtml) {
         const scoreLabel = isSelectionActive && p.dynamic_score !== undefined ? ` - Score: <strong>${p.dynamic_score.toFixed(2)}</strong>` : '';
         listOl.append("li").html(`${p.Player} (${p.Season}) - ${p.Team}${scoreLabel}`);
     });
+}
+
+// --- 6.5 CLICK-TO-SELECT: CONFRONTO DETTAGLIATO DI UN SINGOLO CANDIDATO ---
+// Implementa quanto promesso nel goal della proposal: "clicking on any
+// candidate triggers a detailed comparison against historical winners,
+// exposing overlooked players and questionable award decisions". Attivabile
+// cliccando un punto della PCA, una linea del PCP, o una barra del grafico
+// voter-fatigue (che richiama selectCandidate con una nota già pronta).
+let selectedCandidateKey = null;
+
+function resetCandidateFocus() {
+    selectedCandidateKey = null;
+    d3.select("#boxplot-title").text("Comparative Metric Distribution");
+    d3.selectAll(".point").classed("selected-highlight", false);
+    d3.selectAll(".polyline").classed("candidate-focus", false);
+    d3.selectAll(".fatigue-bar").classed("selected", false);
+}
+
+function clearCandidateSelection() {
+    resetCandidateFocus();
+    renderBoxPlot(globalData);
+}
+
+// Rank del candidato tra tutti i candidati della SUA stagione (non solo tra i
+// vincitori): permette di "esporre" anche i non-vincitori con statistiche
+// migliori del vincitore reale di quell'anno.
+function computeSeasonRanks(player, season) {
+    const candidates = globalData.filter(p => p.Season === season);
+    const rankOn = metric => {
+        const sorted = [...candidates].sort((a, b) => b[metric] - a[metric]);
+        return sorted.findIndex(p => p.Player === player) + 1;
+    };
+    return {
+        n: candidates.length,
+        PIE_rank: rankOn("PIE"),
+        WS_rank: rankOn("WS"),
+        Team_W_PCT_rank: rankOn("Team_W_PCT"),
+    };
+}
+
+function buildCandidateNote(d) {
+    const ranks = computeSeasonRanks(d.Player, d.Season);
+    if (d.Is_MVP_Winner === 1) {
+        return `Tra i ${ranks.n} candidati del ${d.Season}: rank <strong>${ranks.PIE_rank}°</strong> su PIE, <strong>${ranks.WS_rank}°</strong> su Win Shares, <strong>${ranks.Team_W_PCT_rank}°</strong> su vittorie di squadra — ha vinto l'MVP quell'anno.`;
+    }
+    const winner = globalData.find(p => p.Season === d.Season && p.Is_MVP_Winner === 1);
+    const overlooked = winner && ranks.PIE_rank === 1
+        ? ` Nonostante fosse #1 su PIE quell'anno, non ha vinto — un possibile candidato "snobbato".`
+        : '';
+    return `Tra i ${ranks.n} candidati del ${d.Season}: rank <strong>${ranks.PIE_rank}°</strong> su PIE, <strong>${ranks.WS_rank}°</strong> su Win Shares, <strong>${ranks.Team_W_PCT_rank}°</strong> su vittorie di squadra — l'MVP fu vinto da ${winner ? winner.Player : 'N/D'}.${overlooked}`;
+}
+
+function selectCandidate(d, noteOverride) {
+    selectedCandidateKey = `${d.Player}_${d.Season}`;
+
+    d3.selectAll(".point").classed("selected-highlight", p =>
+        `${p.Player}_${p.Season}` === selectedCandidateKey);
+    d3.selectAll(".polyline")
+        .classed("candidate-focus", p => `${p.Player}_${p.Season}` === selectedCandidateKey)
+        .classed("dimmed", p => `${p.Player}_${p.Season}` !== selectedCandidateKey);
+
+    updateSidebar([d], false, noteOverride || buildCandidateNote(d));
+    renderPlayerVsWinnersBoxPlot(d);
+}
+
+// Confronto vs vincitori storici della stessa era (quanto promesso nella
+// proposal per il Box Plot: "comparing the selected player against
+// historical MVP winners of the same era"), sulla metrica PIE.
+function renderPlayerVsWinnersBoxPlot(player) {
+    const metric = "PIE";
+    const era = player.Tactical_Era;
+    const winners = globalData.filter(p => p.Is_MVP_Winner === 1 && p.Tactical_Era === era);
+
+    d3.select("#boxplot-title").text(`${player.Player} (${player.Season}) vs Vincitori — ${era}`);
+    d3.select("#boxplot-desc").html(
+        `Box = distribuzione PIE dei vincitori MVP reali dell'era (n=${winners.length}); ` +
+        `linea rossa = PIE di <strong>${player.Player}</strong>. ` +
+        `<a id="reset-candidate-focus">↺ torna al confronto per era</a>`
+    );
+    d3.select("#reset-candidate-focus").on("click", (event) => {
+        event.preventDefault();
+        clearCandidateSelection();
+    });
+
+    const container = d3.select("#boxplot-chart");
+    container.selectAll("*").remove();
+
+    const margin = { top: 15, right: 90, bottom: 30, left: 40 };
+    const width = container.node().getBoundingClientRect().width - margin.left - margin.right;
+    const height = 215 - margin.top - margin.bottom;
+
+    const svg = container.append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const winnerVals = winners.map(w => w[metric]).filter(v => !isNaN(v)).sort(d3.ascending);
+    const allVals = winnerVals.concat([player[metric]]);
+    const yScale = d3.scaleLinear()
+        .domain([d3.min(allVals) * 0.9, d3.max(allVals) * 1.1]).nice()
+        .range([height, 0]);
+    const xScale = d3.scaleBand().domain([era]).range([0, width]).padding(0.55);
+
+    svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(xScale));
+    svg.append("g").call(d3.axisLeft(yScale).ticks(5));
+
+    if (winnerVals.length > 0) {
+        const q1 = d3.quantile(winnerVals, 0.25);
+        const median = d3.quantile(winnerVals, 0.5);
+        const q3 = d3.quantile(winnerVals, 0.75);
+        const iqr = q3 - q1;
+        const lo = Math.max(d3.min(winnerVals), q1 - 1.5 * iqr);
+        const hi = Math.min(d3.max(winnerVals), q3 + 1.5 * iqr);
+        const bx = xScale(era), bw = xScale.bandwidth();
+
+        svg.append("line").attr("x1", bx + bw / 2).attr("x2", bx + bw / 2)
+            .attr("y1", yScale(lo)).attr("y2", yScale(hi)).attr("stroke", "#000");
+        svg.append("rect").attr("x", bx).attr("y", yScale(q3))
+            .attr("height", Math.max(1, yScale(q1) - yScale(q3))).attr("width", bw)
+            .attr("fill", ERA_COLORS[era] || "#ccc").attr("opacity", 0.6).attr("stroke", "#000");
+        svg.append("line").attr("x1", bx).attr("x2", bx + bw)
+            .attr("y1", yScale(median)).attr("y2", yScale(median))
+            .attr("stroke", "#000").attr("stroke-width", 2);
+    }
+
+    const py = yScale(player[metric]);
+    svg.append("line").attr("x1", 0).attr("x2", width).attr("y1", py).attr("y2", py)
+        .attr("stroke", "#b2182b").attr("stroke-width", 1.5).attr("stroke-dasharray", "4,3");
+    svg.append("circle").attr("cx", xScale(era) + xScale.bandwidth() + 14).attr("cy", py)
+        .attr("r", 5).attr("fill", "#b2182b");
+    svg.append("text").attr("x", xScale(era) + xScale.bandwidth() + 22).attr("y", py + 4)
+        .attr("font-size", "0.68rem").attr("fill", "#b2182b")
+        .text(`${player.Player.split(" ").pop()} (${player[metric].toFixed(3)})`);
 }
 
 // --- 7. MODULO INSIGHTS: ANNOTAZIONE PERSISTENTE SUL CASO PIU' ANOMALO ---
@@ -632,21 +844,21 @@ function renderFatigueChart(insights) {
 }
 
 function selectFatigueCase(fatigueCase) {
-    d3.selectAll(".fatigue-bar").classed("selected", function(d) {
+    d3.selectAll(".fatigue-bar").classed("selected", function() {
         return d3.select(this).attr("data-key") === `${fatigueCase.player}|${fatigueCase.season}`;
     });
 
     const record = globalData.find(d => d.Player === fatigueCase.player && d.Season === fatigueCase.season);
     if (!record) return;
 
-    d3.selectAll(".point").classed("selected-highlight", d =>
-        d.Player === fatigueCase.player && d.Season === fatigueCase.season);
-
     const dir = fatigueCase.residual >= 0
         ? `ha ricevuto un voto <strong>più alto</strong> di quanto PIE e record di squadra da soli giustifichino (+${fatigueCase.residual}) — un possibile "bonus di fiducia" dopo aver già vinto l'MVP l'anno prima (${fatigueCase.previous_mvp_season}).`
         : `ha ricevuto un voto <strong>più basso</strong> di quanto PIE e record di squadra da soli giustifichino (${fatigueCase.residual}) rispetto all'anno del suo MVP (${fatigueCase.previous_mvp_season}) — un possibile effetto "voter fatigue" o crollo del contesto di squadra.`;
 
-    updateSidebar([record], false, `Rispetto al modello Share ~ PIE + Team_W_PCT (R²=${insightsData.voter_fatigue.r2}), ${fatigueCase.player} nel ${fatigueCase.season} ${dir}`);
+    // Riusa selectCandidate: evidenzia il punto in PCA/PCP e mostra lo stesso
+    // confronto "vs vincitori storici dell'era" del click diretto, con in più
+    // la spiegazione testuale del residuo del modello.
+    selectCandidate(record, `Rispetto al modello Share ~ PIE + Team_W_PCT (R²=${insightsData.voter_fatigue.r2}), ${fatigueCase.player} nel ${fatigueCase.season} ${dir}`);
 }
 
 // --- 10. MODULO INSIGHTS: CALLOUT NARRATIVO ---
@@ -665,5 +877,92 @@ function renderInsightCallout(insights) {
         <strong>${before.gap}</strong>. Nel ${gap.next_year}, con l'arrivo di ${after.second[0]}, il divario crolla a <strong>${after.gap}</strong> —
         la firma numerica dell'arrivo di un secondo protagonista offensivo.</p>
         <p style="margin-top:8px; font-size:0.75rem; color:#7f8c8d">Nota: lo stesso confronto per Westbrook/George (OKC) non è verificabile con questo dataset, perché George non ricevette voti MVP nel ${insights.narrative_cases.usage_gap_not_verifiable.next_year} e quindi non compare tra i candidati.</p>
+    `);
+}
+
+// --- 11. MODULO INSIGHTS: EFFETTO-SOGLIA SUL RECORD DI SQUADRA ---
+// Isola l'effetto del solo contesto di squadra dal merito individuale:
+// guarda solo i candidati gia' statisticamente forti (rank <=5 su PIE nella
+// propria stagione) e misura a quale Team_W_PCT il voto crolla quasi
+// certamente (Share<10%). Verifica quantitativa su tutto il campione (135
+// candidati) dell'ipotesi nata da soli 4 casi aneddotici nelle note originali.
+function renderThresholdChart(insights) {
+    const container = d3.select("#threshold-chart");
+    container.selectAll("*").remove();
+
+    const wt = insights.win_rate_threshold;
+    const order = ["under_55", "band_55_65", "over_65"];
+    const data = order.map(key => ({ key, ...wt.bands[key] }));
+
+    const margin = { top: 15, right: 20, bottom: 34, left: 45 };
+    const width = container.node().getBoundingClientRect().width - margin.left - margin.right;
+    const height = 170;
+
+    const svg = container.append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const x = d3.scaleBand().domain(data.map(d => d.label)).range([0, width]).padding(0.35);
+    const y = d3.scaleLinear().domain([0, 100]).range([height, 0]);
+    // Sequenziale (una tinta, chiaro->scuro) sulla magnitudine del rischio:
+    // il colore segue il valore reale di collapse_rate_pct, non una scelta
+    // manuale delle 3 tonalità.
+    const colorScale = d3.scaleSequential(d3.interpolateReds).domain([0, 100]);
+
+    svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x));
+    svg.append("g").call(d3.axisLeft(y).ticks(5).tickFormat(d => d + "%"));
+
+    svg.selectAll(".threshold-bar")
+        .data(data)
+        .enter()
+        .append("rect")
+        .attr("class", "threshold-bar")
+        .attr("x", d => x(d.label))
+        .attr("y", d => y(d.collapse_rate_pct))
+        .attr("width", x.bandwidth())
+        .attr("height", d => height - y(d.collapse_rate_pct))
+        .attr("rx", 2)
+        .attr("fill", d => colorScale(d.collapse_rate_pct))
+        .attr("stroke", "#8b1a1a")
+        .attr("stroke-width", 0.5)
+        .on("mouseenter", (event, d) => {
+            showTooltip(`<strong>Record squadra ${d.label}</strong><br>${d.collapse_rate_pct}% con voto quasi azzerato<br>n=${d.n}, share media=${d.mean_share}`, event);
+        })
+        .on("mousemove", (event) => showTooltip(getTooltip().html(), event))
+        .on("mouseleave", hideTooltip);
+
+    // Etichette dirette col valore: solo 3 barre, leggibile senza affollare.
+    svg.selectAll(".threshold-label")
+        .data(data)
+        .enter()
+        .append("text")
+        .attr("x", d => x(d.label) + x.bandwidth() / 2)
+        .attr("y", d => y(d.collapse_rate_pct) - 6)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "0.75rem")
+        .attr("font-weight", "600")
+        .attr("fill", "#333")
+        .text(d => `${d.collapse_rate_pct}%`);
+}
+
+function renderThresholdCallout(insights) {
+    const wt = insights.win_rate_threshold;
+    const el = d3.select("#threshold-callout");
+
+    el.html(`
+        <p>Tra i <strong>${wt.n_serious_candidates}</strong> candidati già statisticamente da MVP
+        (rank ≤5 su PIE nella loro stagione), il voto crolla quasi certamente quando la squadra
+        vince <strong>meno del 55%</strong> delle partite:</p>
+        <ul style="margin:8px 0 8px 18px; font-size:0.85rem;">
+            <li><strong>${wt.bands.under_55.collapse_rate_pct}%</strong> crollati sotto il 55% (n=${wt.bands.under_55.n})</li>
+            <li><strong>${wt.bands.band_55_65.collapse_rate_pct}%</strong> tra 55-65% (n=${wt.bands.band_55_65.n})</li>
+            <li><strong>${wt.bands.over_65.collapse_rate_pct}%</strong> oltre il 65% (n=${wt.bands.over_65.n})</li>
+        </ul>
+        <p style="font-size:0.75rem; color:#7f8c8d">Le note originali ipotizzavano una soglia al
+        60-65% partendo da 4 casi aneddotici (Garnett, Nowitzki, Nash, Curry). Verificato qui su
+        tutto il campione: il salto più netto è più vicino al 55% — il 60-65% resta comunque dentro
+        la "zona di rischio", solo non è il punto più critico.</p>
     `);
 }

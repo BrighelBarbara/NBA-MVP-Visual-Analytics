@@ -18,7 +18,7 @@
         <!-- QUADRANTE A: Scatterplot PCA -->
         <section class="card" id="pca-card">
             <h2>Spatial PCA Projection (PC1 vs PC2)</h2>
-            <p class="card-desc">Fai <strong>Brushing (seleziona un'area)</strong> per filtrare e ricalcolare l'MVP Score.</p>
+            <p class="card-desc">Fai <strong>Brushing (seleziona un'area)</strong> per filtrare, oppure <strong>clicca un singolo punto</strong> per un confronto dettagliato con i vincitori storici della sua era.</p>
             <div id="pca-legend" class="legend"></div>
             <div id="pca-plot"></div>
         </section>
@@ -26,7 +26,7 @@
         <!-- QUADRANTE B: Parallel Coordinates Plot (PCP) -->
         <section class="card" id="pcp-card">
             <h2>Parallel Coordinates Plot (PCP)</h2>
-            <p class="card-desc">Fai <strong>Brushing verticale sugli assi</strong> per filtrare range specifici.</p>
+            <p class="card-desc">Fai <strong>Brushing verticale sugli assi</strong> per filtrare range specifici, oppure <strong>clicca una linea</strong> per il confronto dettagliato.</p>
             <div id="pcp-plot"></div>
         </section>
 
@@ -51,7 +51,8 @@
 
         <!-- QUADRANTE D: Box Plot Comparativo -->
         <section class="card" id="boxplot-card">
-            <h2>Comparative Metric Distribution</h2>
+            <h2 id="boxplot-title">Comparative Metric Distribution</h2>
+            <p class="card-desc" id="boxplot-desc">Distribuzione dei Punti (PTS) per era, sulla selezione corrente.</p>
             <div id="boxplot-chart"></div>
         </section>
     </div>
@@ -73,6 +74,19 @@
         <aside class="card" id="insight-callout-card">
             <h2>Il caso più anomalo</h2>
             <div id="insight-callout" class="info-box"></div>
+        </aside>
+    </div>
+
+    <div class="dashboard-grid threshold-grid">
+        <section class="card" id="threshold-card">
+            <h2>Effetto-soglia: quando il voto crolla quasi certamente</h2>
+            <p class="card-desc">Tra i candidati già statisticamente forti (rank ≤5 su PIE nella loro stagione, n=135), % con voto quasi azzerato (Share &lt; 10%) in base al record di squadra.</p>
+            <div id="threshold-chart"></div>
+        </section>
+
+        <aside class="card" id="threshold-callout-card">
+            <h2>Cosa dice il dato</h2>
+            <div id="threshold-callout" class="info-box"></div>
         </aside>
     </div>
 
