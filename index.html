@@ -19,6 +19,7 @@
         <section class="card" id="pca-card">
             <h2>Spatial PCA Projection (PC1 vs PC2)</h2>
             <p class="card-desc">Fai <strong>Brushing (seleziona un'area)</strong> per filtrare e ricalcolare l'MVP Score.</p>
+            <div id="pca-legend" class="legend"></div>
             <div id="pca-plot"></div>
         </section>
 
@@ -53,6 +54,26 @@
             <h2>Comparative Metric Distribution</h2>
             <div id="boxplot-chart"></div>
         </section>
+    </div>
+
+    <!-- MODULO INSIGHTS: risultati dell'analisi "chi lo merita davvero?" -->
+    <div class="dashboard-grid insights-grid">
+        <section class="card" id="reliability-card">
+            <h2>Affidabilità per metrica e per era</h2>
+            <p class="card-desc">% di stagioni in cui il vincitore reale era anche il candidato #1 su quella statistica. <strong>Clicca una barra</strong> per evidenziare l'era corrispondente nella PCA.</p>
+            <div id="reliability-chart"></div>
+        </section>
+
+        <section class="card" id="fatigue-card">
+            <h2>Bonus di fiducia vs "voter fatigue"</h2>
+            <p class="card-desc">Scarto tra il voto ricevuto e quello atteso da un modello Share ~ PIE + Team_W_PCT, per chi ha vinto l'MVP l'anno precedente. <strong>Clicca una barra</strong> per selezionare quel giocatore/stagione.</p>
+            <div id="fatigue-chart"></div>
+        </section>
+
+        <aside class="card" id="insight-callout-card">
+            <h2>Il caso più anomalo</h2>
+            <div id="insight-callout" class="info-box"></div>
+        </aside>
     </div>
 
     <script src="js/app.js"></script>

@@ -91,3 +91,112 @@ body {
     margin-top: 10px;
     font-size: 0.85rem;
 }
+
+/* --- Legenda --- */
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 8px;
+    font-size: 0.78rem;
+    color: #333;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.legend-swatch {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.legend-swatch.winner-swatch {
+    background: #d9d9d9;
+    border: 2px solid #000;
+    width: 9px;
+    height: 9px;
+}
+
+/* --- Modulo Insights --- */
+.insights-grid {
+    grid-template-columns: 2fr 2fr 1fr;
+    grid-template-rows: 300px;
+    margin-top: 15px;
+}
+
+#reliability-card { grid-column: 1 / 2; }
+#fatigue-card { grid-column: 2 / 3; }
+#insight-callout-card { grid-column: 3 / 4; }
+
+.bar-group {
+    cursor: pointer;
+}
+
+.bar-group rect {
+    transition: opacity 0.15s ease, stroke-width 0.15s ease;
+}
+
+.bar-group:hover rect {
+    opacity: 0.85;
+}
+
+.bar-group.era-active rect {
+    stroke: #1a252f;
+    stroke-width: 1.5px;
+}
+
+.fatigue-bar {
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.fatigue-bar:hover {
+    opacity: 0.8;
+}
+
+.fatigue-bar.selected {
+    stroke: #1a252f;
+    stroke-width: 1.5px;
+}
+
+.chart-tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: #1a252f;
+    color: #fff;
+    padding: 6px 9px;
+    border-radius: 5px;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    max-width: 220px;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+}
+
+.annotation-label {
+    font-size: 0.7rem;
+    fill: #1a252f;
+    font-weight: 600;
+}
+
+.annotation-leader {
+    stroke: #1a252f;
+    stroke-width: 1px;
+    stroke-dasharray: 2,2;
+}
+
+.point.selected-highlight {
+    stroke: #b2182b !important;
+    stroke-width: 3px !important;
+}
+
+#insight-callout strong {
+    color: #1a252f;
+}

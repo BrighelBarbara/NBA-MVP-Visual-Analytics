@@ -1,0 +1,775 @@
+{
+  "generated_from": "data/mvp_candidates_pca.csv",
+  "n_candidates": 354,
+  "n_seasons": 27,
+  "top1_reliability": {
+    "overall": {
+      "PIE": {
+        "hit": 19,
+        "total": 27,
+        "pct": 70.4
+      },
+      "WS": {
+        "hit": 13,
+        "total": 22,
+        "pct": 59.1
+      },
+      "Team_W_PCT": {
+        "hit": 11,
+        "total": 27,
+        "pct": 40.7
+      },
+      "PTS": {
+        "hit": 9,
+        "total": 27,
+        "pct": 33.3
+      },
+      "Net_Rating": {
+        "hit": 6,
+        "total": 27,
+        "pct": 22.2
+      },
+      "USG_PCT": {
+        "hit": 6,
+        "total": 27,
+        "pct": 22.2
+      }
+    },
+    "by_era": {
+      "Pre-Analytics": {
+        "PIE": {
+          "hit": 6,
+          "total": 9,
+          "pct": 66.7
+        },
+        "WS": {
+          "hit": 3,
+          "total": 4,
+          "pct": 75.0
+        },
+        "Team_W_PCT": {
+          "hit": 3,
+          "total": 9,
+          "pct": 33.3
+        },
+        "PTS": {
+          "hit": 4,
+          "total": 9,
+          "pct": 44.4
+        },
+        "Net_Rating": {
+          "hit": 2,
+          "total": 9,
+          "pct": 22.2
+        },
+        "USG_PCT": {
+          "hit": 2,
+          "total": 9,
+          "pct": 22.2
+        }
+      },
+      "Transition": {
+        "PIE": {
+          "hit": 7,
+          "total": 11,
+          "pct": 63.6
+        },
+        "WS": {
+          "hit": 7,
+          "total": 11,
+          "pct": 63.6
+        },
+        "Team_W_PCT": {
+          "hit": 5,
+          "total": 11,
+          "pct": 45.5
+        },
+        "PTS": {
+          "hit": 2,
+          "total": 11,
+          "pct": 18.2
+        },
+        "Net_Rating": {
+          "hit": 3,
+          "total": 11,
+          "pct": 27.3
+        },
+        "USG_PCT": {
+          "hit": 1,
+          "total": 11,
+          "pct": 9.1
+        }
+      },
+      "Small-Ball": {
+        "PIE": {
+          "hit": 6,
+          "total": 7,
+          "pct": 85.7
+        },
+        "WS": {
+          "hit": 3,
+          "total": 7,
+          "pct": 42.9
+        },
+        "Team_W_PCT": {
+          "hit": 3,
+          "total": 7,
+          "pct": 42.9
+        },
+        "PTS": {
+          "hit": 3,
+          "total": 7,
+          "pct": 42.9
+        },
+        "Net_Rating": {
+          "hit": 1,
+          "total": 7,
+          "pct": 14.3
+        },
+        "USG_PCT": {
+          "hit": 3,
+          "total": 7,
+          "pct": 42.9
+        }
+      }
+    }
+  },
+  "merit_mismatch": [
+    {
+      "season": "2004-05",
+      "player": "Steve Nash",
+      "era": "Pre-Analytics",
+      "PIE_rank": 11,
+      "PIE_n": 16,
+      "WS_rank": 11,
+      "WS_n": 16,
+      "Team_W_PCT_rank": 1,
+      "Team_W_PCT_n": 16
+    },
+    {
+      "season": "2005-06",
+      "player": "Steve Nash",
+      "era": "Transition",
+      "PIE_rank": 7,
+      "PIE_n": 11,
+      "WS_rank": 8,
+      "WS_n": 11,
+      "Team_W_PCT_rank": 5,
+      "Team_W_PCT_n": 11
+    },
+    {
+      "season": "2007-08",
+      "player": "Kobe Bryant",
+      "era": "Transition",
+      "PIE_rank": 8,
+      "PIE_n": 17,
+      "WS_rank": 4,
+      "WS_n": 17,
+      "Team_W_PCT_rank": 5,
+      "Team_W_PCT_n": 17
+    },
+    {
+      "season": "2010-11",
+      "player": "Derrick Rose",
+      "era": "Transition",
+      "PIE_rank": 5,
+      "PIE_n": 13,
+      "WS_rank": 4,
+      "WS_n": 13,
+      "Team_W_PCT_rank": 2,
+      "Team_W_PCT_n": 13
+    },
+    {
+      "season": "2014-15",
+      "player": "Stephen Curry",
+      "era": "Transition",
+      "PIE_rank": 4,
+      "PIE_n": 12,
+      "WS_rank": 3,
+      "WS_n": 12,
+      "Team_W_PCT_rank": 1,
+      "Team_W_PCT_n": 12
+    },
+    {
+      "season": "2016-17",
+      "player": "Russell Westbrook",
+      "era": "Small-Ball",
+      "PIE_rank": 1,
+      "PIE_n": 11,
+      "WS_rank": 3,
+      "WS_n": 11,
+      "Team_W_PCT_rank": 9,
+      "Team_W_PCT_n": 11
+    },
+    {
+      "season": "2019-20",
+      "player": "Giannis Antetokounmpo",
+      "era": "Small-Ball",
+      "PIE_rank": 1,
+      "PIE_n": 12,
+      "WS_rank": 3,
+      "WS_n": 12,
+      "Team_W_PCT_rank": 1,
+      "Team_W_PCT_n": 12
+    },
+    {
+      "season": "2022-23",
+      "player": "Joel Embiid",
+      "era": "Small-Ball",
+      "PIE_rank": 1,
+      "PIE_n": 13,
+      "WS_rank": 3,
+      "WS_n": 13,
+      "Team_W_PCT_rank": 5,
+      "Team_W_PCT_n": 13
+    },
+    {
+      "season": "2018-19",
+      "player": "Giannis Antetokounmpo",
+      "era": "Small-Ball",
+      "PIE_rank": 1,
+      "PIE_n": 12,
+      "WS_rank": 2,
+      "WS_n": 12,
+      "Team_W_PCT_rank": 1,
+      "Team_W_PCT_n": 12
+    },
+    {
+      "season": "2020-21",
+      "player": "Nikola Jokic",
+      "era": "Small-Ball",
+      "PIE_rank": 2,
+      "PIE_n": 15,
+      "WS_rank": 1,
+      "WS_n": 15,
+      "Team_W_PCT_rank": 9,
+      "Team_W_PCT_n": 15
+    },
+    {
+      "season": "2001-02",
+      "player": "Tim Duncan",
+      "era": "Pre-Analytics",
+      "PIE_rank": 1,
+      "PIE_n": 18,
+      "WS_rank": 1,
+      "WS_n": 18,
+      "Team_W_PCT_rank": 5,
+      "Team_W_PCT_n": 18
+    },
+    {
+      "season": "2002-03",
+      "player": "Tim Duncan",
+      "era": "Pre-Analytics",
+      "PIE_rank": 1,
+      "PIE_n": 13,
+      "WS_rank": 1,
+      "WS_n": 13,
+      "Team_W_PCT_rank": 1,
+      "Team_W_PCT_n": 13
+    },
+    {
+      "season": "2003-04",
+      "player": "Kevin Garnett",
+      "era": "Pre-Analytics",
+      "PIE_rank": 1,
+      "PIE_n": 16,
+      "WS_rank": 1,
+      "WS_n": 16,
+      "Team_W_PCT_rank": 5,
+      "Team_W_PCT_n": 16
+    },
+    {
+      "season": "2006-07",
+      "player": "Dirk Nowitzki",
+      "era": "Transition",
+      "PIE_rank": 1,
+      "PIE_n": 16,
+      "WS_rank": 1,
+      "WS_n": 16,
+      "Team_W_PCT_rank": 1,
+      "Team_W_PCT_n": 16
+    },
+    {
+      "season": "2008-09",
+      "player": "LeBron James",
+      "era": "Transition",
+      "PIE_rank": 1,
+      "PIE_n": 12,
+      "WS_rank": 1,
+      "WS_n": 12,
+      "Team_W_PCT_rank": 1,
+      "Team_W_PCT_n": 12
+    },
+    {
+      "season": "2009-10",
+      "player": "LeBron James",
+      "era": "Transition",
+      "PIE_rank": 1,
+      "PIE_n": 15,
+      "WS_rank": 1,
+      "WS_n": 15,
+      "Team_W_PCT_rank": 1,
+      "Team_W_PCT_n": 15
+    },
+    {
+      "season": "2011-12",
+      "player": "LeBron James",
+      "era": "Transition",
+      "PIE_rank": 1,
+      "PIE_n": 14,
+      "WS_rank": 1,
+      "WS_n": 14,
+      "Team_W_PCT_rank": 3,
+      "Team_W_PCT_n": 14
+    },
+    {
+      "season": "2012-13",
+      "player": "LeBron James",
+      "era": "Transition",
+      "PIE_rank": 1,
+      "PIE_n": 16,
+      "WS_rank": 1,
+      "WS_n": 16,
+      "Team_W_PCT_rank": 1,
+      "Team_W_PCT_n": 16
+    },
+    {
+      "season": "2013-14",
+      "player": "Kevin Durant",
+      "era": "Transition",
+      "PIE_rank": 1,
+      "PIE_n": 17,
+      "WS_rank": 1,
+      "WS_n": 17,
+      "Team_W_PCT_rank": 3,
+      "Team_W_PCT_n": 17
+    },
+    {
+      "season": "2015-16",
+      "player": "Stephen Curry",
+      "era": "Transition",
+      "PIE_rank": 1,
+      "PIE_n": 10,
+      "WS_rank": 1,
+      "WS_n": 10,
+      "Team_W_PCT_rank": 2,
+      "Team_W_PCT_n": 10
+    },
+    {
+      "season": "2017-18",
+      "player": "James Harden",
+      "era": "Small-Ball",
+      "PIE_rank": 1,
+      "PIE_n": 13,
+      "WS_rank": 1,
+      "WS_n": 13,
+      "Team_W_PCT_rank": 1,
+      "Team_W_PCT_n": 13
+    },
+    {
+      "season": "2021-22",
+      "player": "Nikola Jokic",
+      "era": "Small-Ball",
+      "PIE_rank": 1,
+      "PIE_n": 12,
+      "WS_rank": 1,
+      "WS_n": 12,
+      "Team_W_PCT_rank": 10,
+      "Team_W_PCT_n": 12
+    },
+    {
+      "season": "1996-97",
+      "player": "Karl Malone",
+      "era": "Pre-Analytics",
+      "PIE_rank": 1,
+      "PIE_n": 15,
+      "WS_rank": null,
+      "WS_n": 0,
+      "Team_W_PCT_rank": 3,
+      "Team_W_PCT_n": 15
+    },
+    {
+      "season": "1997-98",
+      "player": "Michael Jordan",
+      "era": "Pre-Analytics",
+      "PIE_rank": 4,
+      "PIE_n": 10,
+      "WS_rank": null,
+      "WS_n": 0,
+      "Team_W_PCT_rank": 3,
+      "Team_W_PCT_n": 10
+    },
+    {
+      "season": "1998-99",
+      "player": "Karl Malone",
+      "era": "Pre-Analytics",
+      "PIE_rank": 1,
+      "PIE_n": 9,
+      "WS_rank": null,
+      "WS_n": 0,
+      "Team_W_PCT_rank": 2,
+      "Team_W_PCT_n": 9
+    },
+    {
+      "season": "1999-00",
+      "player": "Shaquille O'Neal",
+      "era": "Pre-Analytics",
+      "PIE_rank": 1,
+      "PIE_n": 10,
+      "WS_rank": null,
+      "WS_n": 0,
+      "Team_W_PCT_rank": 1,
+      "Team_W_PCT_n": 10
+    },
+    {
+      "season": "2000-01",
+      "player": "Allen Iverson",
+      "era": "Pre-Analytics",
+      "PIE_rank": 6,
+      "PIE_n": 6,
+      "WS_rank": null,
+      "WS_n": 0,
+      "Team_W_PCT_rank": 2,
+      "Team_W_PCT_n": 6
+    }
+  ],
+  "most_anomalous_winner": {
+    "season": "2004-05",
+    "player": "Steve Nash",
+    "era": "Pre-Analytics",
+    "PIE_rank": 11,
+    "PIE_n": 16,
+    "WS_rank": 11,
+    "WS_n": 16,
+    "Team_W_PCT_rank": 1,
+    "Team_W_PCT_n": 16
+  },
+  "voter_fatigue": {
+    "r2": 0.459,
+    "features": [
+      "PIE",
+      "Team_W_PCT"
+    ],
+    "target": "MVP_Share",
+    "mean_residual_incumbents": 0.111,
+    "mean_residual_others": -0.008,
+    "incumbent_cases": [
+      {
+        "player": "Kevin Garnett",
+        "season": "2004-05",
+        "previous_mvp_season": "2003-04",
+        "pie": 0.213,
+        "team_w_pct": 0.537,
+        "share": 0.012,
+        "residual": -0.406
+      },
+      {
+        "player": "Dirk Nowitzki",
+        "season": "2007-08",
+        "previous_mvp_season": "2006-07",
+        "pie": 0.176,
+        "team_w_pct": 0.636,
+        "share": 0.004,
+        "residual": -0.249
+      },
+      {
+        "player": "Russell Westbrook",
+        "season": "2017-18",
+        "previous_mvp_season": "2016-17",
+        "pie": 0.186,
+        "team_w_pct": 0.588,
+        "share": 0.075,
+        "residual": -0.204
+      },
+      {
+        "player": "Stephen Curry",
+        "season": "2016-17",
+        "previous_mvp_season": "2015-16",
+        "pie": 0.151,
+        "team_w_pct": 0.823,
+        "share": 0.051,
+        "residual": -0.196
+      },
+      {
+        "player": "Karl Malone",
+        "season": "1999-00",
+        "previous_mvp_season": "1998-99",
+        "pie": 0.199,
+        "team_w_pct": 0.671,
+        "share": 0.258,
+        "residual": -0.182
+      },
+      {
+        "player": "LeBron James",
+        "season": "2010-11",
+        "previous_mvp_season": "2009-10",
+        "pie": 0.201,
+        "team_w_pct": 0.722,
+        "share": 0.431,
+        "residual": -0.067
+      },
+      {
+        "player": "Giannis Antetokounmpo",
+        "season": "2020-21",
+        "previous_mvp_season": "2019-20",
+        "pie": 0.196,
+        "team_w_pct": 0.656,
+        "share": 0.345,
+        "residual": -0.061
+      },
+      {
+        "player": "Allen Iverson",
+        "season": "2001-02",
+        "previous_mvp_season": "2000-01",
+        "pie": 0.149,
+        "team_w_pct": 0.6,
+        "share": 0.023,
+        "residual": -0.015
+      },
+      {
+        "player": "Tim Duncan",
+        "season": "2003-04",
+        "previous_mvp_season": "2002-03",
+        "pie": 0.212,
+        "team_w_pct": 0.739,
+        "share": 0.582,
+        "residual": -0.006
+      },
+      {
+        "player": "Shaquille O'Neal",
+        "season": "2000-01",
+        "previous_mvp_season": "1999-00",
+        "pie": 0.186,
+        "team_w_pct": 0.689,
+        "share": 0.466,
+        "residual": 0.099
+      },
+      {
+        "player": "Giannis Antetokounmpo",
+        "season": "2019-20",
+        "previous_mvp_season": "2018-19",
+        "pie": 0.239,
+        "team_w_pct": 0.81,
+        "share": 0.952,
+        "residual": 0.119
+      },
+      {
+        "player": "Nikola Jokic",
+        "season": "2022-23",
+        "previous_mvp_season": "2021-22",
+        "pie": 0.211,
+        "team_w_pct": 0.696,
+        "share": 0.674,
+        "residual": 0.131
+      },
+      {
+        "player": "Karl Malone",
+        "season": "1997-98",
+        "previous_mvp_season": "1996-97",
+        "pie": 0.203,
+        "team_w_pct": 0.753,
+        "share": 0.726,
+        "residual": 0.187
+      },
+      {
+        "player": "Tim Duncan",
+        "season": "2002-03",
+        "previous_mvp_season": "2001-02",
+        "pie": 0.206,
+        "team_w_pct": 0.741,
+        "share": 0.808,
+        "residual": 0.259
+      },
+      {
+        "player": "LeBron James",
+        "season": "2013-14",
+        "previous_mvp_season": "2012-13",
+        "pie": 0.2,
+        "team_w_pct": 0.675,
+        "share": 0.713,
+        "residual": 0.263
+      },
+      {
+        "player": "Nikola Jokic",
+        "season": "2021-22",
+        "previous_mvp_season": "2020-21",
+        "pie": 0.23,
+        "team_w_pct": 0.622,
+        "share": 0.875,
+        "residual": 0.267
+      },
+      {
+        "player": "LeBron James",
+        "season": "2012-13",
+        "previous_mvp_season": "2011-12",
+        "pie": 0.221,
+        "team_w_pct": 0.803,
+        "share": 0.998,
+        "residual": 0.293
+      },
+      {
+        "player": "Kobe Bryant",
+        "season": "2008-09",
+        "previous_mvp_season": "2007-08",
+        "pie": 0.159,
+        "team_w_pct": 0.793,
+        "share": 0.577,
+        "residual": 0.302
+      },
+      {
+        "player": "LeBron James",
+        "season": "2009-10",
+        "previous_mvp_season": "2008-09",
+        "pie": 0.218,
+        "team_w_pct": 0.789,
+        "share": 0.98,
+        "residual": 0.308
+      },
+      {
+        "player": "James Harden",
+        "season": "2018-19",
+        "previous_mvp_season": "2017-18",
+        "pie": 0.201,
+        "team_w_pct": 0.654,
+        "share": 0.768,
+        "residual": 0.33
+      },
+      {
+        "player": "Stephen Curry",
+        "season": "2015-16",
+        "previous_mvp_season": "2014-15",
+        "pie": 0.197,
+        "team_w_pct": 0.899,
+        "share": 1.0,
+        "residual": 0.374
+      },
+      {
+        "player": "Steve Nash",
+        "season": "2006-07",
+        "previous_mvp_season": "2005-06",
+        "pie": 0.165,
+        "team_w_pct": 0.776,
+        "share": 0.785,
+        "residual": 0.484
+      },
+      {
+        "player": "Steve Nash",
+        "season": "2005-06",
+        "previous_mvp_season": "2004-05",
+        "pie": 0.166,
+        "team_w_pct": 0.684,
+        "share": 0.739,
+        "residual": 0.512
+      }
+    ]
+  },
+  "narrative_cases": {
+    "team_collapse": [
+      {
+        "player": "Kevin Garnett",
+        "year": "2003-04",
+        "next_year": "2004-05",
+        "pie": [
+          0.222,
+          0.213
+        ],
+        "team_w_pct": [
+          0.707,
+          0.537
+        ],
+        "share": [
+          0.991,
+          0.012
+        ]
+      },
+      {
+        "player": "Dirk Nowitzki",
+        "year": "2006-07",
+        "next_year": "2007-08",
+        "pie": [
+          0.201,
+          0.176
+        ],
+        "team_w_pct": [
+          0.821,
+          0.636
+        ],
+        "share": [
+          0.882,
+          0.004
+        ]
+      },
+      {
+        "player": "Steve Nash",
+        "year": "2004-05",
+        "next_year": "2005-06",
+        "pie": [
+          0.145,
+          0.166
+        ],
+        "team_w_pct": [
+          0.8,
+          0.684
+        ],
+        "share": [
+          0.839,
+          0.739
+        ]
+      },
+      {
+        "player": "Stephen Curry",
+        "year": "2015-16",
+        "next_year": "2016-17",
+        "pie": [
+          0.197,
+          0.151
+        ],
+        "team_w_pct": [
+          0.899,
+          0.823
+        ],
+        "share": [
+          1.0,
+          0.051
+        ]
+      }
+    ],
+    "usage_gap": {
+      "player": "Stephen Curry",
+      "team": "GSW",
+      "year": "2015-16",
+      "next_year": "2016-17",
+      "gap": [
+        {
+          "leader": [
+            "Stephen Curry",
+            0.314
+          ],
+          "second": [
+            "Draymond Green",
+            0.184
+          ],
+          "gap": 0.13
+        },
+        {
+          "leader": [
+            "Stephen Curry",
+            0.286
+          ],
+          "second": [
+            "Kevin Durant",
+            0.271
+          ],
+          "gap": 0.015
+        }
+      ]
+    },
+    "usage_gap_not_verifiable": {
+      "player": "Russell Westbrook",
+      "team": "OKC",
+      "year": "2016-17",
+      "next_year": "2017-18",
+      "reason": "Paul George non ricevette voti MVP nel 2017-18, quindi non compare tra i candidati: il suo USG_PCT non e' nel dataset e il gap calcolato solo sui candidati sarebbe fuorviante."
+    }
+  }
+}
