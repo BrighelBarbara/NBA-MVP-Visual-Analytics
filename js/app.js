@@ -34,7 +34,11 @@ Promise.all([
         d.AST = +d.AST;
         d.TS_PCT = +d.TS_PCT;
         d.Team_W_PCT = +d.Team_W_PCT;
-        d.WS = +d.WS || 0;
+        // WS manca per 50/354 candidati (tutti Pre-Analytics, 1996-97/2000-01
+        // su Basketball-Reference): null, non 0 — altrimenti li si mostra
+        // come se avessero Win Shares pessimi invece di "dato non disponibile"
+        // (d3.mean/d3.extent/d3.deviation ignorano correttamente null).
+        d.WS = d.WS === "" ? null : +d.WS;
         d.PIE = +d.PIE;
         d.MVP_Share = +d.MVP_Share;
         d.Is_MVP_Winner = +d.Is_MVP_Winner;
@@ -305,8 +309,19 @@ function renderParallelCoordinates(data) {
         .padding(1)
         .domain(dimensions);
 
+    // .defined() interrompe la linea nei punti con dato mancante (es. WS
+    // pre-2001) invece di attraversarli come se valessero 0 — meglio un
+    // "buco" onesto che una connessione falsa.
+    const lineGenerator = d3.line()
+        .defined(p => p[1] !== null && !Number.isNaN(p[1]))
+        .x(p => p[0])
+        .y(p => p[1]);
+
     function path(d) {
-        return d3.line()(dimensions.map(p => [xScale(p), yScales[p](d[p])]));
+        return lineGenerator(dimensions.map(p => [
+            xScale(p),
+            d[p] === null ? null : yScales[p](d[p]),
+        ]));
     }
 
     // Disegna le polilinee
@@ -334,9 +349,12 @@ function renderParallelCoordinates(data) {
     axesG.each(function(d) { d3.select(this).call(d3.axisLeft(yScales[d])); })
         .append("text")
         .style("text-anchor", "middle")
+        .style("cursor", "pointer")
         .attr("y", -10)
         .text(d => d)
-        .attr("fill", "#000");
+        .attr("fill", "#000")
+        .attr("text-decoration", "underline")
+        .on("click", (_event, dim) => renderLineChart(lastLineChartData, dim));
     
         // INTEGRAZIONE INTERATTIVA: Aggiunta di d3.brushY per il Brushing su ciascun asse
     axesG.append("g")
@@ -352,6 +370,12 @@ function renderParallelCoordinates(data) {
         });
 
     function brushedPCP(event, dim) {
+        // Come sul brush della PCA: usare il brush per un range di valori
+        // esce dalla modalità "singolo candidato" (altrimenti il marcatore
+        // sulla Line Chart e l'evidenziazione resterebbero incoerenti col
+        // nuovo sottoinsieme filtrato).
+        resetCandidateFocus();
+
         if (event.selection) {
             selections[dim] = event.selection;
         } else {
@@ -397,14 +421,67 @@ function renderParallelCoordinates(data) {
     }
 }
 
+// Regressione lineare semplice (minimi quadrati), usata on-demand dal brush
+// orizzontale della Line Chart. x = indice di stagione nel range selezionato.
+function linearRegression(points) {
+    const n = points.length;
+    if (n < 2) return null;
+    const meanX = d3.mean(points, p => p[0]);
+    const meanY = d3.mean(points, p => p[1]);
+    let num = 0, den = 0;
+    points.forEach(([x, y]) => {
+        num += (x - meanX) * (y - meanY);
+        den += (x - meanX) ** 2;
+    });
+    const slope = den === 0 ? 0 : num / den;
+    const intercept = meanY - slope * meanX;
+    const predict = x => slope * x + intercept;
+    const totalSS = d3.sum(points, p => (p[1] - meanY) ** 2);
+    const residSS = d3.sum(points, p => (p[1] - predict(p[0])) ** 2);
+    const r2 = totalSS === 0 ? 1 : 1 - residSS / totalSS;
+    return { slope, intercept, r2, predict };
+}
+
+// Stato del modulo Line Chart: quale statistica mostra (cambiata cliccando
+// un'etichetta d'asse nel PCP) e l'ultimo dataset renderizzato (serve per
+// ridisegnare con una nuova statistica senza ripetere la logica di selezione).
+let currentLineMetric = "PTS";
+let lastLineChartData = [];
+
 // --- 3. QUADRANTE C: LINE CHART (SERIE STORICA) ---
-function renderLineChart(data) {
+// Tre interazioni "visive" (nessun menu/radio button, come richiesto
+// dall'esame): click su etichetta PCP -> cambia statistica; selezione di un
+// candidato altrove -> marcatore sulla sua stagione; brush orizzontale sulla
+// timeline -> regressione lineare on demand sul periodo trascinato (la terza
+// analytics promessa nella proposal, finora solo in uno script offline).
+function renderLineChart(data, metric) {
+    if (metric) currentLineMetric = metric;
+    lastLineChartData = data;
+
+    d3.select("#linechart-title").text(`Seasonal Evolution vs League Average (${currentLineMetric})`);
+
     const container = d3.select("#line-chart");
     container.selectAll("*").remove();
 
-    const margin = { top: 20, right: 20, bottom: 40, left: 40 };
+    const margin = { top: 24, right: 20, bottom: 40, left: 45 };
     const width = container.node().getBoundingClientRect().width - margin.left - margin.right;
-    const height = 240 - margin.top - margin.bottom;
+    const height = 215 - margin.top - margin.bottom;
+
+    // Media di lega per stagione sulla statistica corrente (i null, es. WS
+    // mancante pre-2001, sono ignorati automaticamente da d3.mean).
+    const nested = d3.groups(data, d => d.Season)
+        .map(([season, records]) => ({
+            Season: season,
+            avgValue: d3.mean(records, r => r[currentLineMetric]),
+        }))
+        .filter(d => d.avgValue !== undefined && !Number.isNaN(d.avgValue))
+        .sort((a, b) => d3.ascending(a.Season, b.Season));
+
+    if (nested.length < 2) {
+        container.append("p").attr("class", "card-desc")
+            .text("Dati insufficienti per questa statistica nella selezione corrente.");
+        return;
+    }
 
     const svg = container.append("svg")
         .attr("width", width + margin.left + margin.right)
@@ -412,20 +489,12 @@ function renderLineChart(data) {
         .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    // Calcolo della media per stagione
-    const nested = d3.groups(data, d => d.Season)
-        .map(([season, records]) => ({
-            Season: season,
-            avgPTS: d3.mean(records, r => r.PTS)
-        }))
-        .sort((a, b) => d3.ascending(a.Season, b.Season));
-
     const xScale = d3.scalePoint()
         .domain(nested.map(d => d.Season))
         .range([0, width]);
 
     const yScale = d3.scaleLinear()
-        .domain([0, d3.max(nested, d => d.avgPTS) || 35]).nice()
+        .domain(d3.extent(nested, d => d.avgValue)).nice()
         .range([height, 0]);
 
     svg.append("g")
@@ -435,11 +504,11 @@ function renderLineChart(data) {
         .attr("transform", "rotate(-25)")
         .style("text-anchor", "end");
 
-    svg.append("g").call(d3.axisLeft(yScale));
+    svg.append("g").call(d3.axisLeft(yScale).ticks(5));
 
-    const line = d3.line()
+    const lineGen = d3.line()
         .x(d => xScale(d.Season))
-        .y(d => yScale(d.avgPTS))
+        .y(d => yScale(d.avgValue))
         .curve(d3.curveMonotoneX);
 
     svg.append("path")
@@ -447,7 +516,64 @@ function renderLineChart(data) {
         .attr("fill", "none")
         .attr("stroke", "#e74c3c")
         .attr("stroke-width", 2.5)
-        .attr("d", line);
+        .attr("d", lineGen);
+
+    // Marcatore del candidato selezionato altrove (PCA/PCP/fatigue), se la
+    // sua stagione e il suo valore per la statistica corrente sono disponibili.
+    if (selectedCandidateKey) {
+        const record = globalData.find(d => `${d.Player}_${d.Season}` === selectedCandidateKey);
+        const val = record ? record[currentLineMetric] : null;
+        if (record && val !== null && val !== undefined && xScale(record.Season) !== undefined) {
+            const cx = xScale(record.Season), cy = yScale(val);
+            svg.append("line")
+                .attr("x1", cx).attr("x2", cx).attr("y1", 0).attr("y2", height)
+                .attr("stroke", "#b2182b").attr("stroke-width", 1).attr("stroke-dasharray", "3,3");
+            svg.append("circle")
+                .attr("cx", cx).attr("cy", cy).attr("r", 5).attr("fill", "#b2182b");
+            svg.append("text")
+                .attr("x", cx + 7).attr("y", cy - 7)
+                .attr("font-size", "0.68rem").attr("fill", "#b2182b")
+                .text(`${record.Player} (${typeof val === "number" ? val.toFixed(2) : val})`);
+        }
+    }
+
+    // Brush orizzontale sulla timeline: al rilascio calcola la regressione
+    // lineare SOLO sul periodo trascinato e disegna la retta di tendenza.
+    const brush = d3.brushX()
+        .extent([[0, 0], [width, height]])
+        .on("end", (event) => {
+            svg.selectAll(".trend-line, .trend-label").remove();
+            if (!event.selection) return;
+
+            const [x0, x1] = event.selection;
+            const inRange = nested
+                .map((d, i) => ({ ...d, idx: i }))
+                .filter(d => xScale(d.Season) >= x0 && xScale(d.Season) <= x1);
+            if (inRange.length < 2) return;
+
+            const reg = linearRegression(inRange.map(d => [d.idx, d.avgValue]));
+            if (!reg) return;
+
+            svg.append("path")
+                .datum(inRange.map(d => ({ Season: d.Season, avgValue: reg.predict(d.idx) })))
+                .attr("class", "trend-line")
+                .attr("fill", "none")
+                .attr("stroke", "#1a252f")
+                .attr("stroke-width", 2)
+                .attr("stroke-dasharray", "6,3")
+                .attr("d", d3.line().x(d => xScale(d.Season)).y(d => yScale(d.avgValue)));
+
+            const trendWord = reg.slope >= 0 ? "in crescita" : "in calo";
+            svg.append("text")
+                .attr("class", "trend-label")
+                .attr("x", (x0 + x1) / 2).attr("y", -8)
+                .attr("text-anchor", "middle")
+                .attr("font-size", "0.72rem").attr("font-weight", "600")
+                .attr("fill", "#1a252f")
+                .text(`Trend ${trendWord}: ${reg.slope >= 0 ? "+" : ""}${reg.slope.toFixed(3)}/stagione (R²=${reg.r2.toFixed(2)})`);
+        });
+
+    svg.append("g").attr("class", "brush").call(brush);
 }
 
 // --- 4. QUADRANTE D: BOX PLOT (DISTRIBUZIONE PER ERA) ---
@@ -503,6 +629,8 @@ function computeDynamicMVPScore(selectedPlayers) {
     const metrics = ['Team_W_PCT', 'WS', 'PIE', 'PTS', 'TS_PCT'];
     const weights = { Team_W_PCT: 0.35, WS: 0.30, PIE: 0.20, PTS: 0.10, TS_PCT: 0.05 };
 
+    // d3.mean/d3.deviation ignorano automaticamente i null (es. WS mancante
+    // pre-2001), quindi media e deviazione standard del gruppo restano corrette.
     const stats = {};
     metrics.forEach(m => {
         const vals = selectedPlayers.map(p => p[m]);
@@ -512,12 +640,18 @@ function computeDynamicMVPScore(selectedPlayers) {
     });
 
     selectedPlayers.forEach(p => {
+        // Un candidato con una metrica mancante non viene penalizzato come se
+        // valesse 0: si esclude quel termine e si riproporzionano i pesi
+        // sulle sole metriche disponibili per lui.
         let score = 0;
+        let usedWeight = 0;
         metrics.forEach(m => {
+            if (p[m] === null || p[m] === undefined) return;
             const z = (p[m] - stats[m].mean) / stats[m].std;
             score += weights[m] * z;
+            usedWeight += weights[m];
         });
-        p.dynamic_score = score;
+        p.dynamic_score = usedWeight > 0 ? score / usedWeight : 0;
     });
 
     selectedPlayers.sort((a, b) => b.dynamic_score - a.dynamic_score);
@@ -568,6 +702,7 @@ function resetCandidateFocus() {
 function clearCandidateSelection() {
     resetCandidateFocus();
     renderBoxPlot(globalData);
+    renderLineChart(lastLineChartData); // rimuove il marcatore dalla Line Chart
 }
 
 // Rank del candidato tra tutti i candidati della SUA stagione (non solo tra i
@@ -575,28 +710,43 @@ function clearCandidateSelection() {
 // migliori del vincitore reale di quell'anno.
 function computeSeasonRanks(player, season) {
     const candidates = globalData.filter(p => p.Season === season);
+    // Esclude i candidati con la metrica mancante dal ranking (non li conta
+    // come "valore 0"); se il giocatore stesso non ha la metrica, il rank è
+    // null ("N/D" in buildCandidateNote) invece di un numero falsato.
     const rankOn = metric => {
-        const sorted = [...candidates].sort((a, b) => b[metric] - a[metric]);
+        const target = candidates.find(p => p.Player === player);
+        if (!target || target[metric] === null || target[metric] === undefined) return null;
+        const valid = candidates.filter(p => p[metric] !== null && p[metric] !== undefined);
+        const sorted = [...valid].sort((a, b) => b[metric] - a[metric]);
         return sorted.findIndex(p => p.Player === player) + 1;
     };
     return {
         n: candidates.length,
         PIE_rank: rankOn("PIE"),
         WS_rank: rankOn("WS"),
+        WS_n: candidates.filter(p => p.WS !== null && p.WS !== undefined).length,
         Team_W_PCT_rank: rankOn("Team_W_PCT"),
     };
 }
 
+function formatRank(rank) {
+    return rank === null || rank === undefined ? "N/D" : `${rank}°`;
+}
+
 function buildCandidateNote(d) {
     const ranks = computeSeasonRanks(d.Player, d.Season);
+    const wsNote = ranks.WS_rank === null
+        ? `WS non disponibile per questa stagione`
+        : `<strong>${formatRank(ranks.WS_rank)}</strong> su Win Shares (n=${ranks.WS_n})`;
+
     if (d.Is_MVP_Winner === 1) {
-        return `Tra i ${ranks.n} candidati del ${d.Season}: rank <strong>${ranks.PIE_rank}°</strong> su PIE, <strong>${ranks.WS_rank}°</strong> su Win Shares, <strong>${ranks.Team_W_PCT_rank}°</strong> su vittorie di squadra — ha vinto l'MVP quell'anno.`;
+        return `Tra i ${ranks.n} candidati del ${d.Season}: rank <strong>${formatRank(ranks.PIE_rank)}</strong> su PIE, ${wsNote}, <strong>${formatRank(ranks.Team_W_PCT_rank)}</strong> su vittorie di squadra — ha vinto l'MVP quell'anno.`;
     }
     const winner = globalData.find(p => p.Season === d.Season && p.Is_MVP_Winner === 1);
     const overlooked = winner && ranks.PIE_rank === 1
         ? ` Nonostante fosse #1 su PIE quell'anno, non ha vinto — un possibile candidato "snobbato".`
         : '';
-    return `Tra i ${ranks.n} candidati del ${d.Season}: rank <strong>${ranks.PIE_rank}°</strong> su PIE, <strong>${ranks.WS_rank}°</strong> su Win Shares, <strong>${ranks.Team_W_PCT_rank}°</strong> su vittorie di squadra — l'MVP fu vinto da ${winner ? winner.Player : 'N/D'}.${overlooked}`;
+    return `Tra i ${ranks.n} candidati del ${d.Season}: rank <strong>${formatRank(ranks.PIE_rank)}</strong> su PIE, ${wsNote}, <strong>${formatRank(ranks.Team_W_PCT_rank)}</strong> su vittorie di squadra — l'MVP fu vinto da ${winner ? winner.Player : 'N/D'}.${overlooked}`;
 }
 
 function selectCandidate(d, noteOverride) {
@@ -610,6 +760,7 @@ function selectCandidate(d, noteOverride) {
 
     updateSidebar([d], false, noteOverride || buildCandidateNote(d));
     renderPlayerVsWinnersBoxPlot(d);
+    renderLineChart(lastLineChartData); // aggiorna il marcatore sulla Line Chart
 }
 
 // Confronto vs vincitori storici della stessa era (quanto promesso nella

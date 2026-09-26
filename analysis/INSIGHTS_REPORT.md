@@ -277,21 +277,110 @@ effetto-soglia (§2.6).
 Rivalidato in Chrome reale: 3 barre renderizzate, callout con i numeri
 corretti, nessun errore in console.
 
-## 8. Cosa resta aperto (non affrontato in questa sessione)
+## 8. Aggiornamento: verifica Box Plot promesso, PCP ora bidirezionale, pulizia mvp_score.js
+
+Verificato di nuovo in Chrome reale (non dato per scontato, vista la lezione
+dell'hover in §8-vecchia): il Box Plot fa davvero quello che la proposal
+promette. Cliccando un candidato (es. Russell Westbrook 2011-12), il titolo
+diventa "Russell Westbrook (2011-12) vs Vincitori — Transition", il box mostra
+la distribuzione PIE dei vincitori reali dell'era (n=11), e una linea rossa
+tratteggiata segna il PIE del candidato selezionato (0.145) — il confronto
+"giocatore selezionato vs vincitori storici della sua era" richiesto, già
+implementato in §5 e qui ri-confermato ancora funzionante dopo modifiche
+esterne alla sessione.
+
+Nel frattempo, fuori da questa sessione, è stato aggiunto un brush verticale
+(`d3.brushY()`) su ciascun asse del PCP, collegato bidirezionalmente alla PCA
+(`brushedPCP()` in `js/app.js`, commit `c159423 Aggiunta vertical brush PCP
+plot`). Verificato: filtrare un asse del PCP dimmera correttamente anche i
+punti della PCA. **L'item "coordinazione bidirezionale PCA↔PCP", che era la
+priorità #1 rimasta aperta, risulta quindi risolto** (non da questa sessione,
+ma confermato funzionante).
+
+Effetto collaterale minore notato durante la verifica: ogni brush per asse
+occupa una striscia di 24px (±12px) centrata sull'asse; un click esattamente
+su quella striscia viene intercettato dal brush invece che dalla linea
+sottostante (stesso principio, in scala ridotta, del brush della PCA).
+Cliccare tra due assi funziona sempre — non bloccante, ma da tenere presente
+in demo.
+
+Rimosso anche `js/mvp_score.js` (comparso nella stessa ondata di commit,
+referenziato in `index.html` ma mai realmente usato): definiva
+`onVisualSelection()`, mai invocata da nessuna parte, che a sua volta chiamava
+una funzione inesistente (`updateBoxPlot` — la funzione reale si chiama
+`renderBoxPlot`). Era una copia della vecchia `Visual Analytics/mvp_score.js`.
+Rimosso lo script e il suo `<script>` tag da `index.html`; verificato che la
+dashboard carica ancora tutti i 9 grafici SVG senza errori in console.
+
+## 9. Aggiornamento: WS mancante trattato come dato assente, non come 0
+
+Corretto il bug segnalato nel §4 originale: `d.WS = +d.WS || 0` trasformava i
+50/354 candidati con WS mancante (tutti Pre-Analytics, 1996-97–2000-01, fonte
+Basketball-Reference incompleta) in un falso "Win Shares = 0", distorcendo
+visivamente il PCP e falsando qualunque calcolo che usasse WS per quei
+candidati. Corretto in `js/app.js` in quattro punti:
+
+1. **Parsing**: `d.WS = d.WS === "" ? null : +d.WS` — `null`, non `0`.
+2. **Asse PCP**: il dominio (`d3.extent`) ignora automaticamente i `null`,
+   quindi il minimo dell'asse WS ora è il valore reale più basso (2) invece
+   di essere trascinato a 0 dai falsi zeri.
+3. **Polilinee PCP**: il generatore di linea ora usa `.defined()` per creare
+   un'interruzione onesta nei 50 candidati senza WS, invece di attraversare
+   un punto inventato. Verificato: esattamente 50 polilinee mostrano
+   un'interruzione (contate via numero di comandi `M` nel path).
+4. **MVP Score dinamico e rank al click**: un candidato con WS mancante non
+   viene più penalizzato come se avesse WS=0 — il termine viene escluso e i
+   pesi ridistribuiti sulle metriche disponibili (`computeDynamicMVPScore`);
+   il rank su WS mostra onestamente "N/D" invece di un numero falsato
+   (`computeSeasonRanks`). Verificato: cliccando Gary Payton (1996-97) la
+   sidebar mostra "WS non disponibile per questa stagione" invece di un rank.
+
+Verificate tutte le 21 colonne numeriche del CSV: solo `WS` e `WS48` (stesse
+50 righe) hanno valori mancanti; `WS48` non è comunque usato da nessuna parte
+nel codice. La correzione non serve altrove.
+
+## 10. Aggiornamento: Line Chart — statistica selezionabile, marcatore, regressione on demand
+
+Chiuso l'ultimo gap tra proposal e implementazione: la terza analytics
+promessa ("Linear regression is computed on demand to quantify statistical
+trends across seasons and eras") esisteva solo come script offline
+(`Visual Analytics/compute_mvp_model.py`), mai richiamata dalla dashboard.
+Riprogettata la Line Chart con tre interazioni visive (nessun menu/radio
+button, coerente col vincolo d'esame):
+
+1. **Click su un'etichetta d'asse del PCP** ("PTS", "PIE", "WS"...) cambia la
+   statistica mostrata dalla Line Chart — sostituisce il selettore a tendina
+   che la proposal implicava, riusando un elemento visivo già esistente
+   invece di introdurre un widget.
+2. **Selezione di un candidato altrove** (PCA, PCP, grafico fatigue) marca la
+   sua stagione sulla Line Chart con un punto e una linea tratteggiata,
+   confrontandolo visivamente con la media di lega — il "confronto vs media
+   di lega" richiesto dalla proposal, riusando la selezione già esistente
+   invece di una quarta interazione nuova.
+3. **Brush orizzontale sulla timeline** calcola on demand una regressione
+   lineare (minimi quadrati, implementata a mano) solo sul periodo
+   trascinato, disegnando la retta di tendenza con pendenza e R² — finalmente
+   collega la regressione allo strumento interattivo.
+
+Esempio verificato in Chrome reale: selezionata la statistica PIE, selezionato
+Steve Nash (2005-06) dal grafico fatigue (marcatore a 0.17), poi trascinato un
+brush su 2012-13/2022-23 → "Trend in crescita: +0.002/stagione (R²=0.62)",
+coerente con l'§2.1 (PIE più affidabile nell'era Small-Ball).
+
+Corretta anche una piccola incoerenza collegata: il brush verticale del PCP
+(aggiunto fuori da questa sessione, §8) non azzerava lo stato "candidato
+selezionato" come già faceva il brush della PCA — aggiunta la stessa chiamata
+(`resetCandidateFocus()`) per coerenza, altrimenti il marcatore sulla Line
+Chart sarebbe rimasto incoerente dopo un brush sugli assi del PCP.
+
+## 11. Cosa resta aperto (non affrontato in questa sessione)
 
 Dalla revisione precedente del progetto, restano da fare, in ordine di priorità:
 
-1. Coordinazione **bidirezionale** reale tra PCA e PCP tramite brushing
-   (oggi il brush ad area esiste solo sulla PCA; il PCP non ha un proprio
-   brush sugli assi, anche se ora supporta il click su singola linea) —
-   rischio penalità -5 punti su "coordinated in both ways".
-2. Line Chart da riscrivere per fare quello che la proposal promette
-   (selettore statistica + confronto vs media di lega — oggi mostra solo la
-   media PTS di lega, fissa).
-3. Pulizia repo: cartelle `Visual Analytics/` e `data1/` sono pipeline
+1. Pulizia repo: cartelle `Visual Analytics/` e `data1/` sono pipeline
    obsolete, non più usate dall'app — solo `data/mvp_candidates_pca.csv` +
    `analysis/mvp_merit_analysis.py` sono la pipeline "viva".
-4. Hover-pop dell'opacità sui punti PCA: tentato e **rimosso** — passava i
+2. Hover-pop dell'opacità sui punti PCA: tentato e **rimosso** — passava i
    test automatici in Chrome (Playwright) ma non funzionava nell'uso reale
    nel browser dell'utente (si vedeva solo il cursore a crocetta del brush,
    nessun cambiamento di opacità). Causa non ancora diagnosticata; da
