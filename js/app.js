@@ -219,6 +219,9 @@ function renderParallelCoordinates(data) {
 
     const dimensions = ["PTS", "REB", "AST", "TS_PCT", "Team_W_PCT", "WS", "PIE"];
 
+    // Oggetto per memorizzare i filtri attivi su ciascun asse
+    const selections = {};
+
     const yScales = {};
     dimensions.forEach(dim => {
         yScales[dim] = d3.scaleLinear()
@@ -235,7 +238,8 @@ function renderParallelCoordinates(data) {
         return d3.line()(dimensions.map(p => [xScale(p), yScales[p](d[p])]));
     }
 
-    svg.selectAll(".polyline")
+    // Disegna le polilinee
+    const lines = svg.selectAll(".polyline")
         .data(data)
         .enter()
         .append("path")
@@ -244,18 +248,78 @@ function renderParallelCoordinates(data) {
         .attr("stroke", d => ERA_COLORS[d.Tactical_Era] || "#34495e")
         .attr("opacity", 0.3);
 
-    svg.selectAll(".axis")
+    // Disegna gli assi verticali
+    const axesG = svg.selectAll(".axis")
         .data(dimensions)
         .enter()
         .append("g")
         .attr("class", "axis")
-        .attr("transform", d => `translate(${xScale(d)})`)
-        .each(function(d) { d3.select(this).call(d3.axisLeft(yScales[d])); })
+        .attr("transform", d => `translate(${xScale(d)})`);
+    
+    axesG.each(function(d) { d3.select(this).call(d3.axisLeft(yScales[d])); })
         .append("text")
         .style("text-anchor", "middle")
         .attr("y", -10)
         .text(d => d)
         .attr("fill", "#000");
+    
+        // INTEGRAZIONE INTERATTIVA: Aggiunta di d3.brushY per il Brushing su ciascun asse
+    axesG.append("g")
+        .attr("class", "brush")
+        .each(function(dim) {
+            d3.select(this).call(
+                d3.brushY()
+                    .extent([[-12, 0], [12, height]])
+                    .on("brush end", function(event) {
+                        brushedPCP(event, dim);
+                    })
+            );
+        });
+
+    function brushedPCP(event, dim) {
+        if (event.selection) {
+            selections[dim] = event.selection;
+        } else {
+            delete selections[dim];
+        }
+
+        const activeDims = Object.keys(selections);
+
+        // Se non c'è alcun intervallo selezionato su nessun asse
+        if (activeDims.length === 0) {
+            lines.classed("dimmed", false);
+            d3.selectAll(".point").classed("dimmed", false);
+            renderLineChart(globalData);
+            renderBoxPlot(globalData);
+            updateSidebar(globalData.slice(0, 5), false);
+            return;
+        }
+
+        // Filtra i giocatori che rispettano i limiti imposti su TUTTI gli assi spuntati
+        const selected = globalData.filter(d => {
+            return activeDims.every(p => {
+                const y = yScales[p](d[p]);
+                const [y0, y1] = selections[p];
+                return y >= y0 && y <= y1;
+            });
+        });
+
+        const selectedIDs = new Set(selected.map(s => `${s.Player}_${s.Season}`));
+
+        // Updating visivo polilinee PCP
+        lines.classed("dimmed", d => !selectedIDs.has(`${d.Player}_${d.Season}`));
+
+        // Linking verso la PCA: evidenzia i punti corrispondenti nello Scatterplot
+        d3.selectAll(".point")
+            .classed("dimmed", d => !selectedIDs.has(`${d.Player}_${d.Season}`));
+
+        // Analytics Trigger: ricalcola l'MVP Score e aggiorna Line Chart e Box Plot
+        if (selected.length > 0) {
+            renderLineChart(selected);
+            renderBoxPlot(selected);
+            computeDynamicMVPScore(selected);
+        }
+    }
 }
 
 // --- 3. QUADRANTE C: LINE CHART (SERIE STORICA) ---
