@@ -771,5 +771,81 @@
       "next_year": "2017-18",
       "reason": "Paul George non ricevette voti MVP nel 2017-18, quindi non compare tra i candidati: il suo USG_PCT non e' nel dataset e il gap calcolato solo sui candidati sarebbe fuorviante."
     }
+  },
+  "win_rate_threshold": {
+    "n_serious_candidates": 135,
+    "serious_definition": "PIE rank <= 5 nella propria stagione",
+    "collapse_definition": "MVP_Share < 0.1",
+    "bands": {
+      "under_55": {
+        "label": "< 55%",
+        "n": 19,
+        "mean_share": 0.068,
+        "collapse_rate_pct": 89.5
+      },
+      "band_55_65": {
+        "label": "55-65%",
+        "n": 34,
+        "mean_share": 0.283,
+        "collapse_rate_pct": 32.4
+      },
+      "over_65": {
+        "label": ">= 65%",
+        "n": 82,
+        "mean_share": 0.512,
+        "collapse_rate_pct": 18.3
+      }
+    },
+    "fine_bins": [
+      {
+        "range_low": 0,
+        "range_high": 0.5,
+        "n": 3,
+        "mean_share": 0.018,
+        "collapse_rate_pct": 100.0
+      },
+      {
+        "range_low": 0.5,
+        "range_high": 0.55,
+        "n": 16,
+        "mean_share": 0.078,
+        "collapse_rate_pct": 87.5
+      },
+      {
+        "range_low": 0.55,
+        "range_high": 0.6,
+        "n": 14,
+        "mean_share": 0.255,
+        "collapse_rate_pct": 35.7
+      },
+      {
+        "range_low": 0.6,
+        "range_high": 0.65,
+        "n": 20,
+        "mean_share": 0.303,
+        "collapse_rate_pct": 30.0
+      },
+      {
+        "range_low": 0.65,
+        "range_high": 0.7,
+        "n": 32,
+        "mean_share": 0.379,
+        "collapse_rate_pct": 28.1
+      },
+      {
+        "range_low": 0.7,
+        "range_high": 0.75,
+        "n": 28,
+        "mean_share": 0.487,
+        "collapse_rate_pct": 14.3
+      },
+      {
+        "range_low": 0.75,
+        "range_high": 1.0,
+        "n": 22,
+        "mean_share": 0.736,
+        "collapse_rate_pct": 9.1
+      }
+    ]
   }
 }

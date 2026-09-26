@@ -121,6 +121,29 @@ bonus di fiducia più alto di tutti nei due anni successivi qui). È il caso pi�
 solido di "voto guidato da reputazione più che da merito statistico puro" in
 tutto il dataset.
 
+### 2.6 Effetto-soglia sul record di squadra: la vera soglia è ~55%, non 60-65%
+
+Le note originali ipotizzavano una soglia critica al 60-65% di vittorie,
+basandosi su soli 4 casi aneddotici (Garnett, Nowitzki, Nash, Curry — §2.3).
+Verificato quantitativamente su tutto il campione: filtrando ai **135
+candidati già statisticamente forti** (rank ≤5 su PIE nella propria stagione,
+così un voto basso non si spiega con "non era abbastanza bravo"), % con voto
+quasi azzerato (Share < 0.10) in base al record di squadra:
+
+| Record di squadra | n | % voto crollato | Share media |
+|---|---|---|---|
+| < 55% | 19 | **89.5%** | 0.068 |
+| 55–65% | 34 | **32.4%** | 0.283 |
+| ≥ 65% | 82 | **18.3%** | 0.512 |
+
+**Lettura**: l'ipotesi originale non era sbagliata (60-65% resta dentro la
+"zona di rischio"), ma il salto più netto avviene prima, verso il **55%**: da
+quel punto in giù, quasi 9 candidati su 10 statisticamente da MVP vengono
+comunque azzerati nel voto. Sopra il 65% il rischio scende sotto il 20%. È un
+buon esempio di come i 4 casi aneddotici avessero individuato il fenomeno
+giusto ma non il punto esatto — verificarlo su tutto il campione ha corretto
+la stima, non il fenomeno.
+
 ---
 
 ## 3. Cosa è cambiato nella dashboard
@@ -178,19 +201,99 @@ di scope da **dichiarare onestamente** nel report finale.
 
 ---
 
-## 5. Cosa resta aperto (non affrontato in questa sessione)
+## 5. Aggiornamento: click sul singolo candidato implementato
+
+Aggiunta successiva a questa sessione: **click su un punto della PCA, su una
+linea del PCP, o su una barra del grafico voter-fatigue** ora seleziona quel
+candidato e attiva un confronto dettagliato — esattamente quanto promesso nel
+goal della proposal ("clicking on any candidate triggers a detailed
+comparison against historical winners, exposing overlooked players").
+
+Cosa succede al click:
+- Il punto/linea viene evidenziato (bordo rosso in PCA, linea rossa spessa in PCP).
+- La sidebar mostra il rank del candidato tra **tutti** i candidati della sua
+  stagione (non solo tra i vincitori) su PIE, WS, Team_W_PCT — se il
+  candidato non ha vinto ma era #1 su PIE, viene segnalato esplicitamente
+  come possibile "snobbato" (es. **Russell Westbrook 2011-12**: rank 11°/14
+  su PIE, MVP vinto da LeBron James).
+- Il Box Plot passa dalla vista "per era" (tutti i candidati, statistica PTS)
+  a un confronto **PIE del candidato selezionato vs distribuzione dei
+  vincitori MVP reali della sua stessa era**, con un link per tornare alla
+  vista precedente.
+
+Nota tecnica: in D3 il rettangolo trasparente del brush (`overlay`, usato per
+il brushing ad area sulla PCA) intercetta *tutti* i click prima dei cerchi
+sottostanti. Il click-to-select sulla PCA sfrutta quindi l'evento `brush end`
+con selezione nulla: se il click coincide con un punto (entro 15px), seleziona
+quel candidato; altrimenti resetta la vista. Sul PCP, che non ha un brush
+proprio, il click è collegato direttamente alle linee.
+
+Verificato in Chrome reale (Playwright): click su punto PCA, click su linea
+PCP, click su barra fatigue, e reset via click su area vuota — tutti
+funzionanti, nessun errore in console.
+
+## 6. Aggiornamento: codifica a forma per i vincitori MVP
+
+La proposal prometteva "shape distinguishes MVP winners from non-winners"; era
+implementato invece solo come bordo nero su cerchi identici — nessuna vera
+forma diversa. Corretto: i vincitori reali sono ora disegnati come **stelle**
+(`d3.symbolStar`), i non vincitori restano **cerchi** (`d3.symbolCircle`),
+generati con `d3.symbol()` invece di `<circle>`. Il bordo nero è stato
+mantenuto insieme alla forma (codifica ridondante forma+bordo, utile per
+l'accessibilità a chi ha difficoltà a distinguere piccole differenze di
+forma). Legenda aggiornata con le icone reali.
+
+Nota tecnica: la `size` di `d3.symbol()` è un'area, ma cerchio e stella la
+convertono in raggio "esterno" con formule diverse (cerchio: `r=√(size/π)`;
+stella: `r=√(size·ka)` con `ka≈0.891`, costante interna di d3-shape). Usare la
+stessa area per entrambe le forme fa apparire la stella ~1.67 volte più
+grande della sua "vote share" reale — errore in cui siamo incappati nella
+prima implementazione (verificato via screenshot, poi corretto invertendo
+la formula per ciascuna forma così il raggio esterno percepito coincide).
+
+Nessun'altra logica (brushing, click-to-select, dimming) dipende dagli
+attributi `cx`/`cy`/`r` dei cerchi — tutte le funzioni ricalcolano le
+coordinate da `xScale(d.PC1)`/`yScale(d.PC2)`, quindi il passaggio da
+`<circle>` a `<path>` non ha richiesto altre modifiche. Rivalidato in Chrome
+reale: click su stella, filtro per era, click fatigue, brush ad area — tutti
+ancora funzionanti dopo il cambio.
+
+## 7. Aggiornamento: quinta analisi — effetto-soglia sul record di squadra
+
+Aggiunta allo script (`win_rate_threshold_effect()` in
+`analysis/mvp_merit_analysis.py`) la verifica quantitativa descritta in §2.6,
+con relativo modulo visivo nella dashboard: un grafico a barre "Effetto-soglia:
+quando il voto crolla quasi certamente" (3 barre, palette sequenziale
+rosso chiaro→scuro proporzionale al tasso di crollo, non scelta a mano) più
+un pannello di testo che spiega la correzione rispetto all'ipotesi originale
+(55% invece di 60-65%). Dati in `insights.json → win_rate_threshold`.
+
+Con questa aggiunta, tutte e 5 le analisi elencate nelle note originali sono
+ora script riproducibili + elementi visivi nella dashboard, non più solo testo
+di chat: affidabilità per metrica (§2.1), caso Nash (§2.2), crollo di
+squadra/voter fatigue (§2.3, §2.5), usage-gap Curry/Durant (§2.4), ed
+effetto-soglia (§2.6).
+
+Rivalidato in Chrome reale: 3 barre renderizzate, callout con i numeri
+corretti, nessun errore in console.
+
+## 8. Cosa resta aperto (non affrontato in questa sessione)
 
 Dalla revisione precedente del progetto, restano da fare, in ordine di priorità:
 
-1. Coordinazione **bidirezionale** reale tra PCA e PCP (oggi il brush esiste
-   solo sulla PCA; il PCP non ha interazione propria) — rischio penalità -5
-   punti su "coordinated in both ways".
-2. **Click sul singolo candidato** in PCA/PCP (oggi solo selezione ad area) —
-   promesso nel goal della proposal ("clicking on any candidate triggers a
-   detailed comparison").
-3. Line Chart e Box Plot da riscrivere per fare quello che la proposal
-   promette (selettore statistica + confronto vs media di lega; confronto
-   giocatore selezionato vs vincitori storici della stessa era).
-4. Pulizia repo: cartelle `Visual Analytics/` e `data1/` sono pipeline
+1. Coordinazione **bidirezionale** reale tra PCA e PCP tramite brushing
+   (oggi il brush ad area esiste solo sulla PCA; il PCP non ha un proprio
+   brush sugli assi, anche se ora supporta il click su singola linea) —
+   rischio penalità -5 punti su "coordinated in both ways".
+2. Line Chart da riscrivere per fare quello che la proposal promette
+   (selettore statistica + confronto vs media di lega — oggi mostra solo la
+   media PTS di lega, fissa).
+3. Pulizia repo: cartelle `Visual Analytics/` e `data1/` sono pipeline
    obsolete, non più usate dall'app — solo `data/mvp_candidates_pca.csv` +
    `analysis/mvp_merit_analysis.py` sono la pipeline "viva".
+4. Hover-pop dell'opacità sui punti PCA: tentato e **rimosso** — passava i
+   test automatici in Chrome (Playwright) ma non funzionava nell'uso reale
+   nel browser dell'utente (si vedeva solo il cursore a crocetta del brush,
+   nessun cambiamento di opacità). Causa non ancora diagnosticata; da
+   riprendere con debug diretto nel browser dell'utente invece di fidarsi
+   solo dei test automatici headless.

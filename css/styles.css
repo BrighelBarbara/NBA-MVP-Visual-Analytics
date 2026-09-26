@@ -54,7 +54,7 @@ body {
 
 /* Styling elementi visivi */
 .point {
-    transition: opacity 0.2s ease, r 0.2s ease;
+    transition: opacity 0.2s ease;
     cursor: pointer;
 }
 
@@ -65,11 +65,23 @@ body {
 .polyline {
     fill: none;
     stroke-width: 1.5px;
-    transition: opacity 0.2s ease;
+    cursor: pointer;
+    transition: opacity 0.2s ease, stroke 0.15s ease, stroke-width 0.15s ease;
 }
 
 .polyline.dimmed {
     opacity: 0.05 !important;
+}
+
+.polyline.candidate-focus {
+    stroke: #b2182b !important;
+    stroke-width: 3px !important;
+    opacity: 1 !important;
+}
+
+#boxplot-desc a {
+    color: #2166AC;
+    cursor: pointer;
 }
 
 .brush .selection {
@@ -116,13 +128,6 @@ body {
     flex-shrink: 0;
 }
 
-.legend-swatch.winner-swatch {
-    background: #d9d9d9;
-    border: 2px solid #000;
-    width: 9px;
-    height: 9px;
-}
-
 /* --- Modulo Insights --- */
 .insights-grid {
     grid-template-columns: 2fr 2fr 1fr;
@@ -133,6 +138,23 @@ body {
 #reliability-card { grid-column: 1 / 2; }
 #fatigue-card { grid-column: 2 / 3; }
 #insight-callout-card { grid-column: 3 / 4; }
+
+.threshold-grid {
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: 260px;
+    margin-top: 15px;
+}
+
+#threshold-card { grid-column: 1 / 2; }
+#threshold-callout-card { grid-column: 2 / 3; }
+
+.threshold-bar {
+    transition: opacity 0.15s ease;
+}
+
+.threshold-bar:hover {
+    opacity: 0.85;
+}
 
 .bar-group {
     cursor: pointer;
