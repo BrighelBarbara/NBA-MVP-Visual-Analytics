@@ -663,6 +663,18 @@
       }
     ]
   },
+  "mvp_score_weights": {
+    "method": "Ridge(alpha=1, positive=True) su z-score, target MVP_Share, pesi normalizzati a somma 1",
+    "n": 304,
+    "r2": 0.523,
+    "weights": {
+      "Team_W_PCT": 0.257,
+      "WS": 0.25,
+      "PIE": 0.372,
+      "PTS": 0.122,
+      "TS_PCT": 0.0
+    }
+  },
   "narrative_cases": {
     "team_collapse": [
       {

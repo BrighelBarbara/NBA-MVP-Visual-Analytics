@@ -1,0 +1,130 @@
+{
+  "features": [
+    "GP",
+    "MIN",
+    "PTS",
+    "REB",
+    "AST",
+    "STL",
+    "BLK",
+    "TOV",
+    "FG_PCT",
+    "FG3_PCT",
+    "FT_PCT",
+    "TS_PCT",
+    "Plus_Minus",
+    "Off_Rating",
+    "Def_Rating",
+    "Net_Rating",
+    "USG_PCT",
+    "PIE",
+    "PCT_PTS",
+    "PCT_AST",
+    "PCT_REB",
+    "PTS_Paint",
+    "PTS_FastBreak",
+    "PTS_Off_TOV"
+  ],
+  "explained_variance": {
+    "PC1": 0.2548,
+    "PC2": 0.2004
+  },
+  "loadings": {
+    "GP": {
+      "PC1": 0.003,
+      "PC2": -0.066
+    },
+    "MIN": {
+      "PC1": -0.075,
+      "PC2": 0.061
+    },
+    "PTS": {
+      "PC1": -0.197,
+      "PC2": 0.36
+    },
+    "REB": {
+      "PC1": 0.298,
+      "PC2": 0.218
+    },
+    "AST": {
+      "PC1": -0.272,
+      "PC2": -0.068
+    },
+    "STL": {
+      "PC1": -0.219,
+      "PC2": -0.048
+    },
+    "BLK": {
+      "PC1": 0.324,
+      "PC2": 0.141
+    },
+    "TOV": {
+      "PC1": -0.189,
+      "PC2": 0.197
+    },
+    "FG_PCT": {
+      "PC1": 0.219,
+      "PC2": 0.21
+    },
+    "FG3_PCT": {
+      "PC1": -0.279,
+      "PC2": -0.068
+    },
+    "FT_PCT": {
+      "PC1": -0.242,
+      "PC2": -0.1
+    },
+    "TS_PCT": {
+      "PC1": -0.037,
+      "PC2": 0.187
+    },
+    "Plus_Minus": {
+      "PC1": 0.023,
+      "PC2": 0.099
+    },
+    "Off_Rating": {
+      "PC1": -0.117,
+      "PC2": 0.144
+    },
+    "Def_Rating": {
+      "PC1": -0.159,
+      "PC2": 0.077
+    },
+    "Net_Rating": {
+      "PC1": 0.044,
+      "PC2": 0.081
+    },
+    "USG_PCT": {
+      "PC1": -0.18,
+      "PC2": 0.338
+    },
+    "PIE": {
+      "PC1": -0.002,
+      "PC2": 0.344
+    },
+    "PCT_PTS": {
+      "PC1": -0.155,
+      "PC2": 0.359
+    },
+    "PCT_AST": {
+      "PC1": -0.278,
+      "PC2": -0.08
+    },
+    "PCT_REB": {
+      "PC1": 0.318,
+      "PC2": 0.197
+    },
+    "PTS_Paint": {
+      "PC1": 0.103,
+      "PC2": 0.361
+    },
+    "PTS_FastBreak": {
+      "PC1": -0.275,
+      "PC2": 0.118
+    },
+    "PTS_Off_TOV": {
+      "PC1": -0.236,
+      "PC2": 0.247
+    }
+  }
+}

@@ -222,3 +222,33 @@ body {
 #insight-callout strong {
     color: #1a252f;
 }
+.point.hovered {
+    stroke: #1a252f !important;
+    stroke-width: 2px !important;
+    opacity: 1 !important;
+}
+
+/* Dopo .point.hovered: a parità di specificità vince l'evidenziazione della selezione */
+.point.selected-highlight {
+    stroke: #b2182b !important;
+    stroke-width: 3px !important;
+}
+
+.axis-label.active-metric {
+    fill: #b2182b;
+    font-weight: 700;
+}
+
+.reset-link {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 0.8rem;
+    color: #2166AC;
+}
+
+.score-note {
+    margin-top: 8px;
+    font-size: 0.72rem;
+    color: #7f8c8d;
+    line-height: 1.35;
+}

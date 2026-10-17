@@ -14,6 +14,22 @@ const RESIDUAL_COLORS = { positive: "#2166AC", negative: "#B2182B" };
 
 let globalData = [];
 let insightsData = null;
+let pcaMeta = null;
+
+// Pesi dell'MVP Score dinamico: stimati in analysis/mvp_merit_analysis.py
+// (Ridge non negativa su MVP_Share, vedi insights.json -> mvp_score_weights),
+// non scelti a mano. Popolati al caricamento.
+let MVP_SCORE_WEIGHTS = {};
+
+const keyOf = d => `${d.Player}_${d.Season}`;
+
+// --- Stato unico dei filtri ---
+// Ogni vista filtrante scrive solo la propria voce; la selezione effettiva e'
+// l'INTERSEZIONE di tutti i filtri attivi, cosi' brush sulla PCA, brush sugli
+// assi del PCP e filtro per era (grafico di affidabilita') si combinano invece
+// di sovrascriversi a vicenda.
+const filters = { pca: null, pcp: null, era: null };
+let currentSelectionData = [];
 
 // Riferimenti al grafico PCA riutilizzati dal modulo Insights (annotazioni,
 // evidenziazione di un singolo giocatore selezionato dal grafico fatigue).
@@ -24,8 +40,9 @@ let pcaYScale = null;
 // --- Inizializzazione e Caricamento Dati D3 ---
 Promise.all([
     d3.csv("data/mvp_candidates_pca.csv"),
-    d3.json("data/insights/insights.json")
-]).then(([data, insights]) => {
+    d3.json("data/insights/insights.json"),
+    d3.json("data/pca_meta.json")
+]).then(([data, insights, meta]) => {
     data.forEach(d => {
         d.PC1 = +d.PC1;
         d.PC2 = +d.PC2;
@@ -46,23 +63,88 @@ Promise.all([
 
     globalData = data;
     insightsData = insights;
+    pcaMeta = meta;
+    MVP_SCORE_WEIGHTS = Object.fromEntries(
+        Object.entries(insights.mvp_score_weights.weights).filter(([, w]) => w > 0));
 
-    // Render di tutti e 4 i quadranti
     renderLegend();
-    renderPCAScatterplot(data);
-    renderParallelCoordinates(data);
-    renderLineChart(data);
-    renderBoxPlot(data);
-    updateSidebar(data.slice(0, 5), false);
-
-    // Modulo Insights: risultati dell'analisi "chi lo merita davvero?"
-    renderNashAnnotation(insights);
-    renderReliabilityChart(insights);
-    renderFatigueChart(insights);
+    renderAllCharts();
     renderInsightCallout(insights);
-    renderThresholdChart(insights);
     renderThresholdCallout(insights);
+    renderScoreWeightsNote(insights.mvp_score_weights);
+    d3.select("#reset-all-filters").on("click", (event) => {
+        event.preventDefault();
+        resetAllFilters();
+    });
+
+    // Ridisegna al cambio di larghezza della finestra (le dimensioni degli
+    // SVG sono lette dal contenitore solo al render). I brush non
+    // sopravvivono al ridisegno, quindi i relativi filtri vengono azzerati;
+    // filtro per era e candidato selezionato invece si conservano.
+    let lastWidth = window.innerWidth;
+    let resizeTimer = null;
+    window.addEventListener("resize", () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            if (window.innerWidth === lastWidth) return;
+            lastWidth = window.innerWidth;
+            renderAllCharts();
+        }, 200);
+    });
 }).catch(err => console.error("Errore nel caricamento dei dati:", err));
+
+function renderAllCharts() {
+    hideTooltip();
+    filters.pca = null;
+    filters.pcp = null;
+    renderPCAScatterplot(globalData);
+    renderParallelCoordinates(globalData);
+    renderNashAnnotation(insightsData);
+    renderReliabilityChart(insightsData);
+    renderFatigueChart(insightsData);
+    renderThresholdChart(insightsData);
+    applyFilters();
+    if (selectedCandidateKey) {
+        const record = globalData.find(d => keyOf(d) === selectedCandidateKey);
+        if (record) selectCandidate(record);
+    }
+}
+
+// Applica l'intersezione dei filtri a tutte le viste collegate.
+function applyFilters() {
+    const active = filters.pca || filters.pcp || filters.era;
+    const selected = globalData.filter(d =>
+        (!filters.pca || filters.pca.has(keyOf(d))) &&
+        (!filters.pcp || filters.pcp.has(keyOf(d))) &&
+        (!filters.era || d.Tactical_Era === filters.era));
+    const ids = new Set(selected.map(keyOf));
+
+    d3.selectAll(".point").classed("dimmed", d => active && !ids.has(keyOf(d)));
+    d3.selectAll(".polyline").classed("dimmed", d => active && !ids.has(keyOf(d)));
+    d3.selectAll(".bar-group").classed("era-active", function() {
+        return filters.era !== null && d3.select(this).attr("data-era") === filters.era;
+    });
+    d3.select("#reset-all-filters").style("display", active ? null : "none");
+
+    currentSelectionData = selected;
+    renderLineChart(selected);
+    renderBoxPlot(selected);
+    computeDynamicMVPScore(selected, !!active);
+}
+
+function resetAllFilters() {
+    // Lo spostamento programmatico dei brush (move null) fa scattare i loro
+    // handler, che azzerano la rispettiva voce di `filters`.
+    d3.selectAll(".brush").each(function() {
+        const brushBehavior = this.__brushBehavior;
+        if (brushBehavior) d3.select(this).call(brushBehavior.move, null);
+    });
+    filters.pca = null;
+    filters.pcp = null;
+    filters.era = null;
+    resetCandidateFocus();
+    applyFilters();
+}
 
 // --- LEGENDA (colori era + marcatore vincitore MVP) ---
 function renderLegend() {
@@ -169,7 +251,7 @@ function renderPCAScatterplot(data) {
         .attr("y", -6)
         .attr("fill", "#000")
         .attr("text-anchor", "end")
-        .text("PC1 (Lunghi vs Guardie)");
+        .text(`PC1 (${(pcaMeta.explained_variance.PC1 * 100).toFixed(1)}%): ← guardie · lunghi →`);
 
     svg.append("g")
         .call(d3.axisLeft(yScale))
@@ -178,7 +260,7 @@ function renderPCAScatterplot(data) {
         .attr("y", 12)
         .attr("fill", "#000")
         .attr("text-anchor", "end")
-        .text("PC2 (Scoring & Impact Volume)");
+        .text(`PC2 (${(pcaMeta.explained_variance.PC2 * 100).toFixed(1)}%): volume offensivo e impatto →`);
 
     const points = svg.selectAll(".point")
         .data(data)
@@ -196,9 +278,36 @@ function renderPCAScatterplot(data) {
         .extent([[0, 0], [width, height]])
         .on("brush end", brushed);
 
-    svg.append("g")
+    const brushG = svg.append("g")
         .attr("class", "brush")
         .call(brush);
+    brushG.node().__brushBehavior = brush;
+
+    // Tooltip al passaggio del mouse. L'overlay del brush sta sopra ai punti e
+    // intercetta tutti gli eventi del puntatore (per questo un mouseenter sui
+    // singoli <path> non scatta mai): cerchiamo il candidato più vicino al
+    // cursore direttamente dall'overlay, come per il click-to-select.
+    let hovered = null;
+    brushG
+        .on("mousemove.tooltip", function(event) {
+            if (event.buttons) { clearHover(); return; } // brush in corso
+            const [mx, my] = d3.pointer(event, this);
+            const d = findNearestPoint(data, xScale, yScale, mx, my, 10);
+            if (d !== hovered) {
+                hovered = d;
+                points.classed("hovered", p => p === d);
+                brushG.select(".overlay").style("cursor", d ? "pointer" : "crosshair");
+            }
+            if (d) showTooltip(candidateTooltipHtml(d), event);
+            else hideTooltip();
+        })
+        .on("mouseleave.tooltip", clearHover);
+
+    function clearHover() {
+        hovered = null;
+        points.classed("hovered", false);
+        hideTooltip();
+    }
 
     // Espone scale e gruppo SVG al modulo Insights (annotazione persistente,
     // evidenziazione di un giocatore selezionato dal grafico voter-fatigue).
@@ -208,56 +317,36 @@ function renderPCAScatterplot(data) {
 
     function brushed(event) {
         if (!event.selection) {
-            // Nessuna area trascinata: se è stato un click (non un drag), il
-            // brush non genera comunque coordinate utilizzabili da solo, ma
-            // l'overlay del brush intercetta comunque il click prima dei
-            // cerchi sottostanti (pointer-events:all) — quindi cerchiamo qui
-            // il candidato più vicino al punto cliccato e lo selezioniamo.
-            if (event.sourceEvent) {
-                const [mx, my] = d3.pointer(event.sourceEvent, this);
-                const clicked = findNearestPoint(data, xScale, yScale, mx, my, 15);
-                if (clicked) {
-                    d3.selectAll(".fatigue-bar").classed("selected", false);
-                    selectCandidate(clicked);
-                    return;
-                }
-            }
-
+            // Un click senza trascinamento arriva qui con selezione nulla:
+            // se cade su un punto (entro 15px) seleziona quel candidato,
+            // altrimenti azzera solo il filtro della PCA.
+            filters.pca = null;
+            const clicked = event.sourceEvent && event.sourceEvent.clientX !== undefined
+                ? findNearestPoint(data, xScale, yScale, ...d3.pointer(event.sourceEvent, this), 15)
+                : null;
             resetCandidateFocus();
-            points.classed("dimmed", false);
-            d3.selectAll(".polyline").classed("dimmed", false);
-            renderLineChart(globalData);
-            renderBoxPlot(globalData);
-            updateSidebar(globalData.slice(0, 5), false);
+            applyFilters();
+            if (clicked) selectCandidate(clicked);
             return;
         }
 
         resetCandidateFocus();
 
         const [[x0, y0], [x1, y1]] = event.selection;
-
-        const selected = data.filter(d => {
+        filters.pca = new Set(data.filter(d => {
             const cx = xScale(d.PC1);
             const cy = yScale(d.PC2);
             return cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1;
-        });
-
-        points.classed("dimmed", d => {
-            const cx = xScale(d.PC1);
-            const cy = yScale(d.PC2);
-            return !(cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1);
-        });
-
-        const selectedIDs = new Set(selected.map(s => `${s.Player}_${s.Season}`));
-        d3.selectAll(".polyline")
-            .classed("dimmed", d => !selectedIDs.has(`${d.Player}_${d.Season}`));
-
-        if (selected.length > 0) {
-            renderLineChart(selected);
-            renderBoxPlot(selected);
-            computeDynamicMVPScore(selected);
-        }
+        }).map(keyOf));
+        applyFilters();
     }
+}
+
+function candidateTooltipHtml(d) {
+    const fmt = v => (v === null || v === undefined) ? "N/D" : v;
+    return `<strong>${d.Player}</strong> (${d.Season}, ${d.Team})${d.Is_MVP_Winner === 1 ? " ★ MVP" : ""}<br>` +
+        `${d.Tactical_Era} · share voti ${(d.MVP_Share * 100).toFixed(1)}%<br>` +
+        `PTS ${d.PTS} · PIE ${d.PIE} · WS ${fmt(d.WS)} · Team W% ${(d.Team_W_PCT * 100).toFixed(0)}%`;
 }
 
 // Trova il candidato più vicino a un punto (mx,my) nello spazio della PCA,
@@ -336,7 +425,9 @@ function renderParallelCoordinates(data) {
         .on("click", (_event, d) => {
             d3.selectAll(".fatigue-bar").classed("selected", false);
             selectCandidate(d);
-        });
+        })
+        .on("mouseenter mousemove", (event, d) => showTooltip(candidateTooltipHtml(d), event))
+        .on("mouseleave", hideTooltip);
 
     // Disegna gli assi verticali
     const axesG = svg.selectAll(".axis")
@@ -348,25 +439,27 @@ function renderParallelCoordinates(data) {
     
     axesG.each(function(d) { d3.select(this).call(d3.axisLeft(yScales[d])); })
         .append("text")
+        .attr("class", "axis-label")
+        .classed("active-metric", d => d === currentMetric)
         .style("text-anchor", "middle")
         .style("cursor", "pointer")
         .attr("y", -10)
         .text(d => d)
         .attr("fill", "#000")
         .attr("text-decoration", "underline")
-        .on("click", (_event, dim) => renderLineChart(lastLineChartData, dim));
-    
-        // INTEGRAZIONE INTERATTIVA: Aggiunta di d3.brushY per il Brushing su ciascun asse
+        .on("click", (_event, dim) => setMetric(dim));
+
+    // INTEGRAZIONE INTERATTIVA: Aggiunta di d3.brushY per il Brushing su ciascun asse
     axesG.append("g")
         .attr("class", "brush")
         .each(function(dim) {
-            d3.select(this).call(
-                d3.brushY()
-                    .extent([[-12, 0], [12, height]])
-                    .on("brush end", function(event) {
-                        brushedPCP(event, dim);
-                    })
-            );
+            const brush = d3.brushY()
+                .extent([[-12, 0], [12, height]])
+                .on("brush end", function(event) {
+                    brushedPCP(event, dim);
+                });
+            d3.select(this).call(brush);
+            this.__brushBehavior = brush;
         });
 
     function brushedPCP(event, dim) {
@@ -384,40 +477,19 @@ function renderParallelCoordinates(data) {
 
         const activeDims = Object.keys(selections);
 
-        // Se non c'è alcun intervallo selezionato su nessun asse
-        if (activeDims.length === 0) {
-            lines.classed("dimmed", false);
-            d3.selectAll(".point").classed("dimmed", false);
-            renderLineChart(globalData);
-            renderBoxPlot(globalData);
-            updateSidebar(globalData.slice(0, 5), false);
-            return;
-        }
-
-        // Filtra i giocatori che rispettano i limiti imposti su TUTTI gli assi spuntati
-        const selected = globalData.filter(d => {
-            return activeDims.every(p => {
+        // Candidati che rispettano i limiti su TUTTI gli assi filtrati (un
+        // valore mancante, es. WS pre-2001, non soddisfa un filtro su quell'asse).
+        filters.pcp = activeDims.length === 0 ? null : new Set(globalData.filter(d =>
+            activeDims.every(p => {
+                if (d[p] === null) return false;
                 const y = yScales[p](d[p]);
                 const [y0, y1] = selections[p];
                 return y >= y0 && y <= y1;
-            });
-        });
+            })
+        ).map(keyOf));
 
-        const selectedIDs = new Set(selected.map(s => `${s.Player}_${s.Season}`));
-
-        // Updating visivo polilinee PCP
-        lines.classed("dimmed", d => !selectedIDs.has(`${d.Player}_${d.Season}`));
-
-        // Linking verso la PCA: evidenzia i punti corrispondenti nello Scatterplot
-        d3.selectAll(".point")
-            .classed("dimmed", d => !selectedIDs.has(`${d.Player}_${d.Season}`));
-
-        // Analytics Trigger: ricalcola l'MVP Score e aggiorna Line Chart e Box Plot
-        if (selected.length > 0) {
-            renderLineChart(selected);
-            renderBoxPlot(selected);
-            computeDynamicMVPScore(selected);
-        }
+        // Linking verso PCA, Line Chart, Box Plot e MVP Score
+        applyFilters();
     }
 }
 
@@ -442,11 +514,18 @@ function linearRegression(points) {
     return { slope, intercept, r2, predict };
 }
 
-// Stato del modulo Line Chart: quale statistica mostra (cambiata cliccando
-// un'etichetta d'asse nel PCP) e l'ultimo dataset renderizzato (serve per
-// ridisegnare con una nuova statistica senza ripetere la logica di selezione).
-let currentLineMetric = "PTS";
-let lastLineChartData = [];
+// Statistica mostrata da Line Chart e Box Plot, cambiata cliccando
+// un'etichetta d'asse nel PCP.
+let currentMetric = "PTS";
+
+function setMetric(metric) {
+    currentMetric = metric;
+    d3.selectAll(".axis-label").classed("active-metric", d => d === metric);
+    renderLineChart(currentSelectionData);
+    const record = selectedCandidateKey && globalData.find(d => keyOf(d) === selectedCandidateKey);
+    if (record) renderPlayerVsWinnersBoxPlot(record);
+    else renderBoxPlot(currentSelectionData);
+}
 
 // --- 3. QUADRANTE C: LINE CHART (SERIE STORICA) ---
 // Tre interazioni "visive" (nessun menu/radio button, come richiesto
@@ -454,11 +533,9 @@ let lastLineChartData = [];
 // candidato altrove -> marcatore sulla sua stagione; brush orizzontale sulla
 // timeline -> regressione lineare on demand sul periodo trascinato (la terza
 // analytics promessa nella proposal, finora solo in uno script offline).
-function renderLineChart(data, metric) {
-    if (metric) currentLineMetric = metric;
-    lastLineChartData = data;
-
-    d3.select("#linechart-title").text(`Seasonal Evolution vs League Average (${currentLineMetric})`);
+function renderLineChart(data) {
+    const scope = data.length === globalData.length ? "tutti i candidati MVP" : "candidati selezionati";
+    d3.select("#linechart-title").text(`Media stagionale di ${currentMetric}: ${scope}`);
 
     const container = d3.select("#line-chart");
     container.selectAll("*").remove();
@@ -467,12 +544,13 @@ function renderLineChart(data, metric) {
     const width = container.node().getBoundingClientRect().width - margin.left - margin.right;
     const height = 215 - margin.top - margin.bottom;
 
-    // Media di lega per stagione sulla statistica corrente (i null, es. WS
+    // Media per stagione dei candidati (non dell'intera lega: il dataset
+    // contiene solo chi ha ricevuto voti MVP) sulla statistica corrente (i null, es. WS
     // mancante pre-2001, sono ignorati automaticamente da d3.mean).
     const nested = d3.groups(data, d => d.Season)
         .map(([season, records]) => ({
             Season: season,
-            avgValue: d3.mean(records, r => r[currentLineMetric]),
+            avgValue: d3.mean(records, r => r[currentMetric]),
         }))
         .filter(d => d.avgValue !== undefined && !Number.isNaN(d.avgValue))
         .sort((a, b) => d3.ascending(a.Season, b.Season));
@@ -522,7 +600,7 @@ function renderLineChart(data, metric) {
     // sua stagione e il suo valore per la statistica corrente sono disponibili.
     if (selectedCandidateKey) {
         const record = globalData.find(d => `${d.Player}_${d.Season}` === selectedCandidateKey);
-        const val = record ? record[currentLineMetric] : null;
+        const val = record ? record[currentMetric] : null;
         if (record && val !== null && val !== undefined && xScale(record.Season) !== undefined) {
             const cx = xScale(record.Season), cy = yScale(val);
             svg.append("line")
@@ -578,13 +656,21 @@ function renderLineChart(data, metric) {
 
 // --- 4. QUADRANTE D: BOX PLOT (DISTRIBUZIONE PER ERA) ---
 function renderBoxPlot(data) {
+    const metric = currentMetric;
     d3.select("#boxplot-title").text("Comparative Metric Distribution");
-    d3.select("#boxplot-desc").html("Distribuzione dei Punti (PTS) per era, sulla selezione corrente.");
+    d3.select("#boxplot-desc").html(`Distribuzione di <strong>${metric}</strong> per era, sulla selezione corrente.`);
 
     const container = d3.select("#boxplot-chart");
     container.selectAll("*").remove();
 
-    const margin = { top: 20, right: 20, bottom: 40, left: 40 };
+    const values = data.map(d => d[metric]).filter(v => v !== null && !Number.isNaN(v));
+    if (values.length === 0) {
+        container.append("p").attr("class", "card-desc")
+            .text(`Nessun valore di ${metric} nella selezione corrente.`);
+        return;
+    }
+
+    const margin = { top: 20, right: 20, bottom: 40, left: 45 };
     const width = container.node().getBoundingClientRect().width - margin.left - margin.right;
     const height = 215 - margin.top - margin.bottom;
 
@@ -596,13 +682,14 @@ function renderBoxPlot(data) {
 
     const eras = ["Pre-Analytics", "Transition", "Small-Ball"];
     const xScale = d3.scaleBand().domain(eras).range([0, width]).padding(0.4);
-    const yScale = d3.scaleLinear().domain([0, d3.max(data, d => d.PTS) || 35]).nice().range([height, 0]);
+    const yScale = d3.scaleLinear().domain(d3.extent(values)).nice().range([height, 0]);
 
     svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(xScale));
-    svg.append("g").call(d3.axisLeft(yScale));
+    svg.append("g").call(d3.axisLeft(yScale).ticks(5));
 
     eras.forEach(era => {
-        const eraData = data.filter(d => d.Tactical_Era === era).map(d => d.PTS).sort(d3.ascending);
+        const eraData = data.filter(d => d.Tactical_Era === era)
+            .map(d => d[metric]).filter(v => v !== null && !Number.isNaN(v)).sort(d3.ascending);
         if (eraData.length === 0) return;
 
         const q1 = d3.quantile(eraData, 0.25);
@@ -616,18 +703,28 @@ function renderBoxPlot(data) {
         const boxWidth = xScale.bandwidth();
 
         svg.append("line").attr("x1", x + boxWidth / 2).attr("x2", x + boxWidth / 2).attr("y1", yScale(min)).attr("y2", yScale(max)).attr("stroke", "#000");
-        svg.append("rect").attr("x", x).attr("y", yScale(q3)).attr("height", yScale(q1) - yScale(q3)).attr("width", boxWidth).attr("fill", ERA_COLORS[era] || "#ccc").attr("opacity", 0.7).attr("stroke", "#000");
+        svg.append("rect").attr("x", x).attr("y", yScale(q3)).attr("height", Math.max(1, yScale(q1) - yScale(q3))).attr("width", boxWidth).attr("fill", ERA_COLORS[era] || "#ccc").attr("opacity", 0.7).attr("stroke", "#000");
         svg.append("line").attr("x1", x).attr("x2", x + boxWidth).attr("y1", yScale(median)).attr("y2", yScale(median)).attr("stroke", "#000").attr("stroke-width", 2);
+        svg.append("text").attr("x", x + boxWidth / 2).attr("y", height + 32)
+            .attr("text-anchor", "middle").attr("font-size", "0.65rem").attr("fill", "#7f8c8d")
+            .text(`n=${eraData.length}`);
     });
 }
 
 // --- 5. ANALYTICS TRIGGER: CALCOLO DINAMICO MVP SCORE ---
-function computeDynamicMVPScore(selectedPlayers) {
+function computeDynamicMVPScore(selectedPlayers, isFiltered) {
     const n = selectedPlayers.length;
-    if (n === 0) return;
+    d3.select("#top-mvp-title").text(isFiltered
+        ? `Top 5 MVP Score: selezione (n=${n})`
+        : `Top 5 MVP Score: tutti i candidati (n=${n})`);
+    if (n === 0) {
+        d3.select("#top-mvp-list").selectAll("*").remove();
+        d3.select("#selected-player-info").html("<p><em>Nessun candidato soddisfa tutti i filtri attivi.</em></p>");
+        return;
+    }
 
-    const metrics = ['Team_W_PCT', 'WS', 'PIE', 'PTS', 'TS_PCT'];
-    const weights = { Team_W_PCT: 0.35, WS: 0.30, PIE: 0.20, PTS: 0.10, TS_PCT: 0.05 };
+    const metrics = Object.keys(MVP_SCORE_WEIGHTS);
+    const weights = MVP_SCORE_WEIGHTS;
 
     // d3.mean/d3.deviation ignorano automaticamente i null (es. WS mancante
     // pre-2001), quindi media e deviazione standard del gruppo restano corrette.
@@ -654,8 +751,18 @@ function computeDynamicMVPScore(selectedPlayers) {
         p.dynamic_score = usedWeight > 0 ? score / usedWeight : 0;
     });
 
-    selectedPlayers.sort((a, b) => b.dynamic_score - a.dynamic_score);
-    updateSidebar(selectedPlayers.slice(0, 5), true);
+    // Ordina una copia: selectedPlayers puo' essere globalData stesso.
+    const ranked = [...selectedPlayers].sort((a, b) => b.dynamic_score - a.dynamic_score);
+    updateSidebar(ranked.slice(0, 5), true);
+}
+
+function renderScoreWeightsNote(scoreModel) {
+    const parts = Object.entries(MVP_SCORE_WEIGHTS)
+        .sort((a, b) => b[1] - a[1])
+        .map(([m, w]) => `${m} ${(w * 100).toFixed(0)}%`);
+    d3.select("#score-weights").html(
+        `Score = media pesata degli z-score calcolati sulla selezione. Pesi stimati dai dati ` +
+        `(Ridge non negativa su MVP Share, R²=${scoreModel.r2}, n=${scoreModel.n}): ${parts.join(" · ")}.`);
 }
 
 // --- 6. PANNELLO E: SIDEBAR DETAILS-ON-DEMAND ---
@@ -701,8 +808,7 @@ function resetCandidateFocus() {
 
 function clearCandidateSelection() {
     resetCandidateFocus();
-    renderBoxPlot(globalData);
-    renderLineChart(lastLineChartData); // rimuove il marcatore dalla Line Chart
+    applyFilters(); // ripristina dimming, Box Plot per era e Line Chart senza marcatore
 }
 
 // Rank del candidato tra tutti i candidati della SUA stagione (non solo tra i
@@ -758,23 +864,29 @@ function selectCandidate(d, noteOverride) {
         .classed("candidate-focus", p => `${p.Player}_${p.Season}` === selectedCandidateKey)
         .classed("dimmed", p => `${p.Player}_${p.Season}` !== selectedCandidateKey);
 
+    d3.select("#top-mvp-title").text("Candidato selezionato");
     updateSidebar([d], false, noteOverride || buildCandidateNote(d));
     renderPlayerVsWinnersBoxPlot(d);
-    renderLineChart(lastLineChartData); // aggiorna il marcatore sulla Line Chart
+    renderLineChart(currentSelectionData); // aggiorna il marcatore sulla Line Chart
 }
 
 // Confronto vs vincitori storici della stessa era (quanto promesso nella
 // proposal per il Box Plot: "comparing the selected player against
 // historical MVP winners of the same era"), sulla metrica PIE.
 function renderPlayerVsWinnersBoxPlot(player) {
-    const metric = "PIE";
+    const metric = currentMetric;
     const era = player.Tactical_Era;
     const winners = globalData.filter(p => p.Is_MVP_Winner === 1 && p.Tactical_Era === era);
+    const playerVal = player[metric];
+    const hasPlayerVal = playerVal !== null && playerVal !== undefined && !Number.isNaN(playerVal);
+    const winnerVals = winners.map(w => w[metric]).filter(v => v !== null && !Number.isNaN(v)).sort(d3.ascending);
 
     d3.select("#boxplot-title").text(`${player.Player} (${player.Season}) vs Vincitori — ${era}`);
     d3.select("#boxplot-desc").html(
-        `Box = distribuzione PIE dei vincitori MVP reali dell'era (n=${winners.length}); ` +
-        `linea rossa = PIE di <strong>${player.Player}</strong>. ` +
+        `Box = distribuzione ${metric} dei vincitori MVP reali dell'era (n=${winnerVals.length}); ` +
+        (hasPlayerVal
+            ? `linea rossa = ${metric} di <strong>${player.Player}</strong>. `
+            : `${metric} non disponibile per <strong>${player.Player}</strong> in questa stagione. `) +
         `<a id="reset-candidate-focus">↺ torna al confronto per era</a>`
     );
     d3.select("#reset-candidate-focus").on("click", (event) => {
@@ -795,8 +907,8 @@ function renderPlayerVsWinnersBoxPlot(player) {
         .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    const winnerVals = winners.map(w => w[metric]).filter(v => !isNaN(v)).sort(d3.ascending);
-    const allVals = winnerVals.concat([player[metric]]);
+    const allVals = hasPlayerVal ? winnerVals.concat([playerVal]) : winnerVals;
+    if (allVals.length === 0) return;
     const yScale = d3.scaleLinear()
         .domain([d3.min(allVals) * 0.9, d3.max(allVals) * 1.1]).nice()
         .range([height, 0]);
@@ -824,14 +936,15 @@ function renderPlayerVsWinnersBoxPlot(player) {
             .attr("stroke", "#000").attr("stroke-width", 2);
     }
 
-    const py = yScale(player[metric]);
+    if (!hasPlayerVal) return;
+    const py = yScale(playerVal);
     svg.append("line").attr("x1", 0).attr("x2", width).attr("y1", py).attr("y2", py)
         .attr("stroke", "#b2182b").attr("stroke-width", 1.5).attr("stroke-dasharray", "4,3");
     svg.append("circle").attr("cx", xScale(era) + xScale.bandwidth() + 14).attr("cy", py)
         .attr("r", 5).attr("fill", "#b2182b");
     svg.append("text").attr("x", xScale(era) + xScale.bandwidth() + 22).attr("y", py + 4)
         .attr("font-size", "0.68rem").attr("fill", "#b2182b")
-        .text(`${player.Player.split(" ").pop()} (${player[metric].toFixed(3)})`);
+        .text(`${player.Player.split(" ").pop()} (${Math.abs(playerVal) >= 10 ? playerVal.toFixed(1) : playerVal.toFixed(3)})`);
 }
 
 // --- 7. MODULO INSIGHTS: ANNOTAZIONE PERSISTENTE SUL CASO PIU' ANOMALO ---
@@ -906,7 +1019,7 @@ function renderReliabilityChart(insights) {
         })))
         .enter()
         .append("g")
-        .attr("class", d => `bar-group ${activeEra === d.era ? 'era-active' : ''}`)
+        .attr("class", d => `bar-group ${filters.era === d.era ? 'era-active' : ''}`)
         .attr("data-era", d => d.era)
         .each(function(d) {
             const pct = d.entry.pct || 0;
@@ -927,16 +1040,12 @@ function renderReliabilityChart(insights) {
         .on("click", (event, d) => highlightEra(d.era));
 }
 
-// Stato del filtro-per-era attivato cliccando il grafico di affidabilità.
-let activeEra = null;
+// Filtro per era attivato cliccando il grafico di affidabilità (un secondo
+// click sulla stessa era lo rimuove). Si combina con i brush di PCA e PCP.
 function highlightEra(era) {
-    activeEra = (activeEra === era) ? null : era;
-
-    d3.selectAll(".point").classed("dimmed", d => activeEra && d.Tactical_Era !== activeEra);
-    d3.selectAll(".polyline").classed("dimmed", d => activeEra && d.Tactical_Era !== activeEra);
-    d3.selectAll(".bar-group").classed("era-active", function() {
-        return activeEra && d3.select(this).attr("data-era") === activeEra;
-    });
+    filters.era = (filters.era === era) ? null : era;
+    resetCandidateFocus();
+    applyFilters();
 }
 
 // --- 9. MODULO INSIGHTS: BONUS DI FIDUCIA vs VOTER FATIGUE ---

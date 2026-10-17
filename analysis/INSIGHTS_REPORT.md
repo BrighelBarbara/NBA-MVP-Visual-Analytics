@@ -214,8 +214,11 @@ Cosa succede al click:
 - La sidebar mostra il rank del candidato tra **tutti** i candidati della sua
   stagione (non solo tra i vincitori) su PIE, WS, Team_W_PCT — se il
   candidato non ha vinto ma era #1 su PIE, viene segnalato esplicitamente
-  come possibile "snobbato" (es. **Russell Westbrook 2011-12**: rank 11°/14
-  su PIE, MVP vinto da LeBron James).
+  come possibile "snobbato" (es. **Kevin Garnett 2004-05**: rank 1°/16 su
+  PIE ma solo 11° nel voto con l'1,2% dei voti, nell'anno in cui l'MVP andò a
+  Steve Nash, 11°/16 su PIE — vedi §2.2). In tutto il dataset gli "snobbati"
+  di questo tipo sono 8, uno per ciascuna delle 8 stagioni su 27 in cui il #1
+  su PIE non ha vinto.
 - Il Box Plot passa dalla vista "per era" (tutti i candidati, statistica PTS)
   a un confronto **PIE del candidato selezionato vs distribuzione dei
   vincitori MVP reali della sua stessa era**, con un link per tornare alla
@@ -373,16 +376,70 @@ selezionato" come già faceva il brush della PCA — aggiunta la stessa chiamata
 (`resetCandidateFocus()`) per coerenza, altrimenti il marcatore sulla Line
 Chart sarebbe rimasto incoerente dopo un brush sugli assi del PCP.
 
-## 11. Cosa resta aperto (non affrontato in questa sessione)
+## 11. Aggiornamento: revisione pre-esame (punti aperti chiusi)
 
-Dalla revisione precedente del progetto, restano da fare, in ordine di priorità:
+Correzioni emerse dalla revisione complessiva del progetto, in ordine di
+priorità.
 
-1. Pulizia repo: cartelle `Visual Analytics/` e `data1/` sono pipeline
-   obsolete, non più usate dall'app — solo `data/mvp_candidates_pca.csv` +
-   `analysis/mvp_merit_analysis.py` sono la pipeline "viva".
-2. Hover-pop dell'opacità sui punti PCA: tentato e **rimosso** — passava i
-   test automatici in Chrome (Playwright) ma non funzionava nell'uso reale
-   nel browser dell'utente (si vedeva solo il cursore a crocetta del brush,
-   nessun cambiamento di opacità). Causa non ancora diagnosticata; da
-   riprendere con debug diretto nel browser dell'utente invece di fidarsi
-   solo dei test automatici headless.
+**Metodologia**
+1. **Varianza spiegata visibile**: le etichette degli assi della PCA ora
+   riportano la varianza di ciascuna componente (PC1 25,5%, PC2 20,0%,
+   cumulata 45,5%), letta da `data/pca_meta.json` e non scritta a mano.
+2. **`Team_W_PCT` rimosso dagli input della PCA**
+   (`Visual Analytics/compute_pca.py`): è contesto di squadra, non merito
+   individuale, e la domanda del progetto è proprio separare le due cose. Il
+   record di squadra resta come asse del PCP. Effetto sulla proiezione
+   minimo (correlazione 0,999 con le coordinate precedenti), varianza
+   cumulata +1,7 punti. Il segno delle componenti è ora fissato (PC1 positivo
+   = REB, PC2 positivo = PTS), così le etichette "guardie ↔ lunghi" e "volume
+   offensivo" restano valide se si rigenera la PCA.
+3. **Pesi dell'MVP Score stimati dai dati**, non più scelti a mano
+   (prima 0.35/0.30/0.20/0.10/0.05). `mvp_score_weights()` in
+   `analysis/mvp_merit_analysis.py`: Ridge su z-score, target MVP_Share,
+   coefficienti vincolati ≥ 0, normalizzati a somma 1 (R² = 0,523, n = 304
+   candidati con WS disponibile). Risultato: **PIE 37% · Team_W_PCT 26% ·
+   WS 25% · PTS 12% · TS_PCT 0%**. Senza vincolo TS_PCT prende un peso
+   negativo solo per collinearità con PIE ("tirare meglio abbassa il
+   punteggio"), da cui il vincolo. I pesi sono mostrati nella sidebar.
+4. **Titolo della Line Chart corretto**: mostrava "vs League Average", ma la
+   media è calcolata sui soli candidati MVP (il dataset non contiene l'intera
+   lega).
+5. **Esempio di "snobbato" corretto** in §5 (Westbrook 2011-12 non era #1 su
+   PIE e quindi non veniva segnalato dal codice; sostituito con Garnett
+   2004-05).
+
+**Interazione**
+6. **Sidebar all'avvio**: mostrava le prime 5 righe del CSV (candidati
+   1996-97). Ora mostra la Top 5 dello score calcolato su tutti i candidati,
+   con titolo che indica se lo score è su tutto il dataset o sulla selezione.
+7. **Filtri combinati**: brush sulla PCA, brush sugli assi del PCP e filtro
+   per era (click sul grafico di affidabilità) ora scrivono in un unico stato
+   (`filters` in `js/app.js`) e la selezione è la loro **intersezione**,
+   applicata da `applyFilters()` a tutte le viste (dimming, Line Chart, Box
+   Plot, MVP Score). Prima ogni filtro sovrascriveva gli altri e il filtro
+   per era dimmerava soltanto, senza aggiornare grafici e score. Aggiunto un
+   link "↺ azzera tutti i filtri" nella sidebar.
+8. **Tooltip sulla PCA (era il punto aperto "hover-pop")**: la causa era la
+   stessa già documentata per il click in §5 — l'overlay del brush sta sopra
+   i punti e intercetta tutti gli eventi del puntatore, quindi un
+   `mouseenter` sui singoli punti non scatta mai (i test headless passavano
+   perché sintetizzavano l'evento direttamente sul nodo). Ora il tooltip è
+   gestito da un `mousemove` sull'overlay, con ricerca del punto più vicino;
+   il punto sotto il cursore viene evidenziato. Tooltip aggiunto anche alle
+   linee del PCP.
+9. **Box Plot collegato alla statistica attiva**: cliccando un'etichetta del
+   PCP cambiano sia la Line Chart sia il Box Plot (per era, oppure
+   candidato vs vincitori della sua era). Valori mancanti (WS) gestiti e
+   numerosità `n` mostrata per ogni era.
+10. **Resize**: i grafici vengono ridisegnati al cambio di larghezza della
+    finestra (si conservano filtro per era e candidato selezionato; i brush
+    vengono azzerati).
+
+**Repository**
+11. Rimossi gli script e gli output obsoleti/incoerenti (vedi README per la
+    pipeline aggiornata).
+
+Verificato in Chromium headless (Playwright) con mouse reale: brush PCA →
+brush PCP → filtro era (intersezione 73 → 40 → 9 candidati), cambio
+statistica, reset, hover e click su Steve Nash, resize; nessun errore in
+console.

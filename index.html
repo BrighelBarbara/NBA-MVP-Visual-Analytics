@@ -18,7 +18,7 @@
         <!-- QUADRANTE A: Scatterplot PCA -->
         <section class="card" id="pca-card">
             <h2>Spatial PCA Projection (PC1 vs PC2)</h2>
-            <p class="card-desc">Fai <strong>Brushing (seleziona un'area)</strong> per filtrare, oppure <strong>clicca un singolo punto</strong> per un confronto dettagliato con i vincitori storici della sua era.</p>
+            <p class="card-desc">Fai <strong>Brushing (seleziona un'area)</strong> per filtrare, <strong>passa sopra un punto</strong> per i dettagli, oppure <strong>clicca un singolo punto</strong> per un confronto dettagliato con i vincitori storici della sua era. I filtri di PCA, PCP ed era si combinano.</p>
             <div id="pca-legend" class="legend"></div>
             <div id="pca-plot"></div>
         </section>
@@ -26,7 +26,7 @@
         <!-- QUADRANTE B: Parallel Coordinates Plot (PCP) -->
         <section class="card" id="pcp-card">
             <h2>Parallel Coordinates Plot (PCP)</h2>
-            <p class="card-desc">Fai <strong>Brushing verticale sugli assi</strong> per filtrare range specifici, <strong>clicca una linea</strong> per il confronto dettagliato, o <strong>clicca l'etichetta di un asse</strong> per mostrarlo nel grafico a destra.</p>
+            <p class="card-desc">Fai <strong>Brushing verticale sugli assi</strong> per filtrare range specifici, <strong>clicca una linea</strong> per il confronto dettagliato, o <strong>clicca l'etichetta di un asse</strong> per mostrare quella statistica in Line Chart e Box Plot.</p>
             <div id="pcp-plot"></div>
         </section>
 
@@ -37,16 +37,18 @@
                 <div id="selected-player-info" class="info-box">
                     <p><em>Seleziona un punto sulla PCA o sul PCP per vedere i dettagli e la classifica ricalcolata.</em></p>
                 </div>
+                <a id="reset-all-filters" class="reset-link" href="#" style="display:none">↺ azzera tutti i filtri</a>
                 <hr>
-                <h3>Top Dynamic MVP Score (Selection)</h3>
+                <h3 id="top-mvp-title">Top 5 MVP Score</h3>
                 <ol id="top-mvp-list" class="ranking-list"></ol>
+                <p id="score-weights" class="score-note"></p>
             </div>
         </aside>
 
         <!-- QUADRANTE C: Line Chart (Serie Storica) -->
         <section class="card" id="line-card">
-            <h2 id="linechart-title">Seasonal Evolution vs League Average (PTS)</h2>
-            <p class="card-desc" id="linechart-desc">Clicca l'etichetta di un asse nel PCP per cambiare statistica. Trascina sull'asse orizzontale per calcolare il trend (regressione lineare) sul periodo selezionato.</p>
+            <h2 id="linechart-title">Media stagionale di PTS: tutti i candidati MVP</h2>
+            <p class="card-desc" id="linechart-desc">Media per stagione dei candidati MVP (non dell'intera lega). Clicca l'etichetta di un asse nel PCP per cambiare statistica. Trascina sull'asse orizzontale per calcolare il trend (regressione lineare) sul periodo selezionato.</p>
             <div id="line-chart"></div>
         </section>
 
@@ -62,7 +64,7 @@
     <div class="dashboard-grid insights-grid">
         <section class="card" id="reliability-card">
             <h2>Affidabilità per metrica e per era</h2>
-            <p class="card-desc">% di stagioni in cui il vincitore reale era anche il candidato #1 su quella statistica. <strong>Clicca una barra</strong> per evidenziare l'era corrispondente nella PCA.</p>
+            <p class="card-desc">% di stagioni in cui il vincitore reale era anche il candidato #1 su quella statistica. <strong>Clicca una barra</strong> per filtrare quell'era su tutte le viste (di nuovo per rimuovere il filtro).</p>
             <div id="reliability-chart"></div>
         </section>
 

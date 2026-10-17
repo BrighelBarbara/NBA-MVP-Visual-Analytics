@@ -1,4 +1,9 @@
+from pathlib import Path
+
 import pandas as pd
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parent
 
 
 def clean_mvp_dataset(input_path: str, output_path: str):
@@ -62,11 +67,14 @@ def clean_mvp_dataset(input_path: str, output_path: str):
   df_clean.to_csv(output_path, index=False)
   print(
       f'Pulizia completata con successo!'
-      f' Generato file: {output_path} ({df_clean.shape} righe, '
+      f' Generato file: {output_path} ({df_clean.shape[0]} righe, '
       f'{df_clean.shape[1]} colonne)'
   )
 
 
 # Esecuzione
 if __name__ == '__main__':
-  clean_mvp_dataset('mvp_candidates_final.csv', 'mvp_candidates_cleaned.csv')
+  clean_mvp_dataset(
+      ROOT / 'data1' / 'processed' / 'mvp_candidates_final.csv',
+      HERE / 'mvp_candidates_cleaned.csv',
+  )

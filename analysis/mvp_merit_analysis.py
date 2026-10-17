@@ -34,7 +34,8 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.preprocessing import StandardScaler
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_PATH = ROOT / "data" / "mvp_candidates_pca.csv"
@@ -186,6 +187,37 @@ def voter_fatigue(rows):
         "mean_residual_incumbents": round(float(np.mean([c["residual"] for c in incumbents])), 3),
         "mean_residual_others": round(float(np.mean(other_residuals)), 3),
         "incumbent_cases": incumbents,
+    }
+
+
+SCORE_METRICS = ["Team_W_PCT", "WS", "PIE", "PTS", "TS_PCT"]
+
+
+def mvp_score_weights(rows):
+    """Pesi dell'MVP Score dinamico della dashboard, stimati dai dati invece
+    che scelti a mano: Ridge su feature standardizzate, target MVP_Share.
+    Coefficienti vincolati >= 0 (positive=True): senza vincolo TS_PCT prende
+    un peso negativo solo per collinearita' con PIE, che renderebbe lo score
+    poco interpretabile ("tirare meglio abbassa il punteggio"). I pesi sono
+    poi normalizzati a somma 1. Righe senza WS (50, Pre-Analytics) escluse."""
+    data = []
+    for r in rows:
+        vals = [to_f(r[m]) for m in SCORE_METRICS]
+        share = to_f(r["MVP_Share"])
+        if share is None or any(v is None for v in vals):
+            continue
+        data.append((vals, share))
+
+    X = StandardScaler().fit_transform(np.array([d[0] for d in data]))
+    y = np.array([d[1] for d in data])
+    model = Ridge(alpha=1.0, positive=True).fit(X, y)
+    total = float(model.coef_.sum())
+
+    return {
+        "method": "Ridge(alpha=1, positive=True) su z-score, target MVP_Share, pesi normalizzati a somma 1",
+        "n": len(data),
+        "r2": round(float(model.score(X, y)), 3),
+        "weights": {m: round(float(c) / total, 3) for m, c in zip(SCORE_METRICS, model.coef_)},
     }
 
 
@@ -343,6 +375,7 @@ def main():
         "merit_mismatch": mismatch,
         "most_anomalous_winner": mismatch[0] if mismatch else None,
         "voter_fatigue": voter_fatigue(rows),
+        "mvp_score_weights": mvp_score_weights(rows),
         "narrative_cases": narrative_cases(rows),
         "win_rate_threshold": win_rate_threshold_effect(rows),
     }
@@ -360,6 +393,9 @@ def main():
     print(f"Modello voter-fatigue: R^2={result['voter_fatigue']['r2']}, "
           f"residuo medio incumbent={result['voter_fatigue']['mean_residual_incumbents']:+.3f} "
           f"vs altri={result['voter_fatigue']['mean_residual_others']:+.3f}")
+
+    sw = result["mvp_score_weights"]
+    print(f"Pesi MVP Score (R^2={sw['r2']}, n={sw['n']}): {sw['weights']}")
 
     wt = result["win_rate_threshold"]
     print(f"Effetto-soglia W_PCT (n={wt['n_serious_candidates']} candidati forti): "
