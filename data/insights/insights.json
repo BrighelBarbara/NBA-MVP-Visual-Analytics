@@ -675,6 +675,819 @@
       "TS_PCT": 0.0
     }
   },
+  "vote_model": {
+    "features": [
+      "PIE",
+      "Team_W_PCT"
+    ],
+    "standardization": {
+      "PIE": {
+        "mean": 0.1656,
+        "std": 0.0243
+      },
+      "Team_W_PCT": {
+        "mean": 0.6539,
+        "std": 0.0965
+      }
+    },
+    "global": {
+      "r2": 0.459,
+      "intercept": 0.1979,
+      "coef": {
+        "PIE": 0.1653,
+        "Team_W_PCT": 0.0846
+      }
+    },
+    "by_era": {
+      "Pre-Analytics": {
+        "n": 113,
+        "r2": 0.386,
+        "coef": {
+          "PIE": 0.132,
+          "Team_W_PCT": 0.075
+        },
+        "ci95": {
+          "PIE": [
+            0.091,
+            0.175
+          ],
+          "Team_W_PCT": [
+            0.033,
+            0.122
+          ]
+        },
+        "pie_to_team_ratio": 1.76
+      },
+      "Transition": {
+        "n": 153,
+        "r2": 0.497,
+        "coef": {
+          "PIE": 0.176,
+          "Team_W_PCT": 0.099
+        },
+        "ci95": {
+          "PIE": [
+            0.141,
+            0.208
+          ],
+          "Team_W_PCT": [
+            0.063,
+            0.132
+          ]
+        },
+        "pie_to_team_ratio": 1.78
+      },
+      "Small-Ball": {
+        "n": 88,
+        "r2": 0.59,
+        "coef": {
+          "PIE": 0.223,
+          "Team_W_PCT": 0.089
+        },
+        "ci95": {
+          "PIE": [
+            0.178,
+            0.263
+          ],
+          "Team_W_PCT": [
+            0.041,
+            0.131
+          ]
+        },
+        "pie_to_team_ratio": 2.51
+      }
+    },
+    "pie_coef_diff_smallball_vs_preanalytics": {
+      "mean": 0.091,
+      "ci95": [
+        0.029,
+        0.15
+      ],
+      "p_diff_le_0": 0.002
+    },
+    "seasons": [
+      {
+        "season": "1996-97",
+        "era": "Pre-Analytics",
+        "winner": "Karl Malone",
+        "winner_expected": 0.624,
+        "statistical_choice": "Karl Malone",
+        "choice_expected": 0.624,
+        "merit_gap": 0.0,
+        "matches": true
+      },
+      {
+        "season": "1997-98",
+        "era": "Pre-Analytics",
+        "winner": "Michael Jordan",
+        "winner_expected": 0.351,
+        "statistical_choice": "Karl Malone",
+        "choice_expected": 0.539,
+        "merit_gap": 0.188,
+        "matches": false
+      },
+      {
+        "season": "1998-99",
+        "era": "Pre-Analytics",
+        "winner": "Karl Malone",
+        "winner_expected": 0.475,
+        "statistical_choice": "Karl Malone",
+        "choice_expected": 0.475,
+        "merit_gap": 0.0,
+        "matches": true
+      },
+      {
+        "season": "1999-00",
+        "era": "Pre-Analytics",
+        "winner": "Shaquille O'Neal",
+        "winner_expected": 0.685,
+        "statistical_choice": "Shaquille O'Neal",
+        "choice_expected": 0.685,
+        "merit_gap": 0.0,
+        "matches": true
+      },
+      {
+        "season": "2000-01",
+        "era": "Pre-Analytics",
+        "winner": "Allen Iverson",
+        "winner_expected": 0.17,
+        "statistical_choice": "Shaquille O'Neal",
+        "choice_expected": 0.367,
+        "merit_gap": 0.198,
+        "matches": false
+      },
+      {
+        "season": "2001-02",
+        "era": "Pre-Analytics",
+        "winner": "Tim Duncan",
+        "winner_expected": 0.526,
+        "statistical_choice": "Tim Duncan",
+        "choice_expected": 0.526,
+        "merit_gap": 0.0,
+        "matches": true
+      },
+      {
+        "season": "2002-03",
+        "era": "Pre-Analytics",
+        "winner": "Tim Duncan",
+        "winner_expected": 0.549,
+        "statistical_choice": "Tim Duncan",
+        "choice_expected": 0.549,
+        "merit_gap": 0.0,
+        "matches": true
+      },
+      {
+        "season": "2003-04",
+        "era": "Pre-Analytics",
+        "winner": "Kevin Garnett",
+        "winner_expected": 0.628,
+        "statistical_choice": "Kevin Garnett",
+        "choice_expected": 0.628,
+        "merit_gap": 0.0,
+        "matches": true
+      },
+      {
+        "season": "2004-05",
+        "era": "Pre-Analytics",
+        "winner": "Steve Nash",
+        "winner_expected": 0.186,
+        "statistical_choice": "Tim Duncan",
+        "choice_expected": 0.55,
+        "merit_gap": 0.364,
+        "matches": false
+      },
+      {
+        "season": "2005-06",
+        "era": "Transition",
+        "winner": "Steve Nash",
+        "winner_expected": 0.227,
+        "statistical_choice": "Dirk Nowitzki",
+        "choice_expected": 0.542,
+        "merit_gap": 0.315,
+        "matches": false
+      },
+      {
+        "season": "2006-07",
+        "era": "Transition",
+        "winner": "Dirk Nowitzki",
+        "winner_expected": 0.585,
+        "statistical_choice": "Dirk Nowitzki",
+        "choice_expected": 0.585,
+        "merit_gap": 0.0,
+        "matches": true
+      },
+      {
+        "season": "2007-08",
+        "era": "Transition",
+        "winner": "Kobe Bryant",
+        "winner_expected": 0.189,
+        "statistical_choice": "Kevin Garnett",
+        "choice_expected": 0.542,
+        "merit_gap": 0.353,
+        "matches": false
+      },
+      {
+        "season": "2008-09",
+        "era": "Transition",
+        "winner": "LeBron James",
+        "winner_expected": 0.749,
+        "statistical_choice": "LeBron James",
+        "choice_expected": 0.749,
+        "merit_gap": 0.0,
+        "matches": true
+      },
+      {
+        "season": "2009-10",
+        "era": "Transition",
+        "winner": "LeBron James",
+        "winner_expected": 0.672,
+        "statistical_choice": "LeBron James",
+        "choice_expected": 0.672,
+        "merit_gap": 0.0,
+        "matches": true
+      },
+      {
+        "season": "2010-11",
+        "era": "Transition",
+        "winner": "Derrick Rose",
+        "winner_expected": 0.291,
+        "statistical_choice": "LeBron James",
+        "choice_expected": 0.498,
+        "merit_gap": 0.207,
+        "matches": false
+      },
+      {
+        "season": "2011-12",
+        "era": "Transition",
+        "winner": "LeBron James",
+        "winner_expected": 0.631,
+        "statistical_choice": "LeBron James",
+        "choice_expected": 0.631,
+        "merit_gap": 0.0,
+        "matches": true
+      },
+      {
+        "season": "2012-13",
+        "era": "Transition",
+        "winner": "LeBron James",
+        "winner_expected": 0.705,
+        "statistical_choice": "LeBron James",
+        "choice_expected": 0.705,
+        "merit_gap": 0.0,
+        "matches": true
+      },
+      {
+        "season": "2013-14",
+        "era": "Transition",
+        "winner": "Kevin Durant",
+        "winner_expected": 0.527,
+        "statistical_choice": "Kevin Durant",
+        "choice_expected": 0.527,
+        "merit_gap": 0.0,
+        "matches": true
+      },
+      {
+        "season": "2014-15",
+        "era": "Transition",
+        "winner": "Stephen Curry",
+        "winner_expected": 0.443,
+        "statistical_choice": "Stephen Curry",
+        "choice_expected": 0.443,
+        "merit_gap": 0.0,
+        "matches": true
+      },
+      {
+        "season": "2015-16",
+        "era": "Transition",
+        "winner": "Stephen Curry",
+        "winner_expected": 0.626,
+        "statistical_choice": "Stephen Curry",
+        "choice_expected": 0.626,
+        "merit_gap": 0.0,
+        "matches": true
+      },
+      {
+        "season": "2016-17",
+        "era": "Small-Ball",
+        "winner": "Russell Westbrook",
+        "winner_expected": 0.56,
+        "statistical_choice": "Russell Westbrook",
+        "choice_expected": 0.56,
+        "merit_gap": 0.0,
+        "matches": true
+      },
+      {
+        "season": "2017-18",
+        "era": "Small-Ball",
+        "winner": "James Harden",
+        "winner_expected": 0.535,
+        "statistical_choice": "James Harden",
+        "choice_expected": 0.535,
+        "merit_gap": 0.0,
+        "matches": true
+      },
+      {
+        "season": "2018-19",
+        "era": "Small-Ball",
+        "winner": "Giannis Antetokounmpo",
+        "winner_expected": 0.663,
+        "statistical_choice": "Giannis Antetokounmpo",
+        "choice_expected": 0.663,
+        "merit_gap": 0.0,
+        "matches": true
+      },
+      {
+        "season": "2019-20",
+        "era": "Small-Ball",
+        "winner": "Giannis Antetokounmpo",
+        "winner_expected": 0.833,
+        "statistical_choice": "Giannis Antetokounmpo",
+        "choice_expected": 0.833,
+        "merit_gap": 0.0,
+        "matches": true
+      },
+      {
+        "season": "2020-21",
+        "era": "Small-Ball",
+        "winner": "Nikola Jokic",
+        "winner_expected": 0.438,
+        "statistical_choice": "Joel Embiid",
+        "choice_expected": 0.549,
+        "merit_gap": 0.112,
+        "matches": false
+      },
+      {
+        "season": "2021-22",
+        "era": "Small-Ball",
+        "winner": "Nikola Jokic",
+        "winner_expected": 0.608,
+        "statistical_choice": "Nikola Jokic",
+        "choice_expected": 0.608,
+        "merit_gap": 0.0,
+        "matches": true
+      },
+      {
+        "season": "2022-23",
+        "era": "Small-Ball",
+        "winner": "Joel Embiid",
+        "winner_expected": 0.518,
+        "statistical_choice": "Nikola Jokic",
+        "choice_expected": 0.543,
+        "merit_gap": 0.025,
+        "matches": false
+      }
+    ],
+    "n_matches": 19,
+    "n_seasons": 27,
+    "big_mismatches": [
+      {
+        "season": "1997-98",
+        "era": "Pre-Analytics",
+        "winner": "Michael Jordan",
+        "winner_expected": 0.351,
+        "statistical_choice": "Karl Malone",
+        "choice_expected": 0.539,
+        "merit_gap": 0.188,
+        "matches": false
+      },
+      {
+        "season": "2000-01",
+        "era": "Pre-Analytics",
+        "winner": "Allen Iverson",
+        "winner_expected": 0.17,
+        "statistical_choice": "Shaquille O'Neal",
+        "choice_expected": 0.367,
+        "merit_gap": 0.198,
+        "matches": false
+      },
+      {
+        "season": "2004-05",
+        "era": "Pre-Analytics",
+        "winner": "Steve Nash",
+        "winner_expected": 0.186,
+        "statistical_choice": "Tim Duncan",
+        "choice_expected": 0.55,
+        "merit_gap": 0.364,
+        "matches": false
+      },
+      {
+        "season": "2005-06",
+        "era": "Transition",
+        "winner": "Steve Nash",
+        "winner_expected": 0.227,
+        "statistical_choice": "Dirk Nowitzki",
+        "choice_expected": 0.542,
+        "merit_gap": 0.315,
+        "matches": false
+      },
+      {
+        "season": "2007-08",
+        "era": "Transition",
+        "winner": "Kobe Bryant",
+        "winner_expected": 0.189,
+        "statistical_choice": "Kevin Garnett",
+        "choice_expected": 0.542,
+        "merit_gap": 0.353,
+        "matches": false
+      },
+      {
+        "season": "2010-11",
+        "era": "Transition",
+        "winner": "Derrick Rose",
+        "winner_expected": 0.291,
+        "statistical_choice": "LeBron James",
+        "choice_expected": 0.498,
+        "merit_gap": 0.207,
+        "matches": false
+      }
+    ],
+    "seasons_since_last_big_mismatch": 12
+  },
+  "position_effect": {
+    "split": "PC1 < 0 = profilo da guardia/esterno, PC1 >= 0 = profilo da lungo",
+    "corr_pc1_narrative": -0.173,
+    "overall": {
+      "guards": {
+        "n": 213,
+        "mean_narrative": 0.028
+      },
+      "bigs": {
+        "n": 141,
+        "mean_narrative": -0.042
+      },
+      "diff": 0.069,
+      "welch_t": 3.1,
+      "p_value": 0.0021
+    },
+    "by_era": {
+      "Pre-Analytics": {
+        "guards": {
+          "n": 55,
+          "mean_narrative": 0.075
+        },
+        "bigs": {
+          "n": 58,
+          "mean_narrative": 0.004
+        },
+        "diff": 0.071,
+        "welch_t": 1.68,
+        "p_value": 0.0949
+      },
+      "Transition": {
+        "guards": {
+          "n": 96,
+          "mean_narrative": 0.044
+        },
+        "bigs": {
+          "n": 57,
+          "mean_narrative": -0.076
+        },
+        "diff": 0.12,
+        "welch_t": 4.11,
+        "p_value": 0.0001
+      },
+      "Small-Ball": {
+        "guards": {
+          "n": 62,
+          "mean_narrative": -0.039
+        },
+        "bigs": {
+          "n": 26,
+          "mean_narrative": -0.067
+        },
+        "diff": 0.027,
+        "welch_t": 0.59,
+        "p_value": 0.5554
+      }
+    },
+    "big_mismatch_shifts": [
+      {
+        "season": "1997-98",
+        "winner": "Michael Jordan",
+        "winner_pc1": -1.04,
+        "winner_ast": 3.5,
+        "choice": "Karl Malone",
+        "choice_pc1": 0.65,
+        "choice_ast": 3.9,
+        "guard_over_big": true
+      },
+      {
+        "season": "2000-01",
+        "winner": "Allen Iverson",
+        "winner_pc1": -3.72,
+        "winner_ast": 4.6,
+        "choice": "Shaquille O'Neal",
+        "choice_pc1": 4.12,
+        "choice_ast": 3.7,
+        "guard_over_big": true
+      },
+      {
+        "season": "2004-05",
+        "winner": "Steve Nash",
+        "winner_pc1": -1.73,
+        "winner_ast": 11.5,
+        "choice": "Tim Duncan",
+        "choice_pc1": 3.86,
+        "choice_ast": 2.7,
+        "guard_over_big": true
+      },
+      {
+        "season": "2005-06",
+        "winner": "Steve Nash",
+        "winner_pc1": -1.63,
+        "winner_ast": 10.5,
+        "choice": "Dirk Nowitzki",
+        "choice_pc1": 0.19,
+        "choice_ast": 2.8,
+        "guard_over_big": true
+      },
+      {
+        "season": "2007-08",
+        "winner": "Kobe Bryant",
+        "winner_pc1": -1.77,
+        "winner_ast": 5.4,
+        "choice": "Kevin Garnett",
+        "choice_pc1": 3.0,
+        "choice_ast": 3.4,
+        "guard_over_big": true
+      },
+      {
+        "season": "2010-11",
+        "winner": "Derrick Rose",
+        "winner_pc1": -2.24,
+        "winner_ast": 7.7,
+        "choice": "LeBron James",
+        "choice_pc1": -1.86,
+        "choice_ast": 7.0,
+        "guard_over_big": false
+      }
+    ],
+    "n_guard_over_big": 5,
+    "winners_by_era": {
+      "Pre-Analytics": {
+        "guards": 3,
+        "bigs": 6
+      },
+      "Transition": {
+        "guards": 10,
+        "bigs": 1
+      },
+      "Small-Ball": {
+        "guards": 4,
+        "bigs": 3
+      }
+    }
+  },
+  "robustness_ws": {
+    "seasons_compared": 22,
+    "first_season": "2001-02",
+    "r2_ws_model": 0.394,
+    "same_statistical_choice": 18,
+    "big_mismatches_pie": [
+      "2004-05",
+      "2005-06",
+      "2007-08",
+      "2010-11"
+    ],
+    "big_mismatches_ws": [
+      "2004-05",
+      "2005-06",
+      "2007-08",
+      "2016-17",
+      "2022-23"
+    ],
+    "last_big_mismatch_ws": "2022-23",
+    "mean_winner_gap": {
+      "pie": {
+        "until_2010": 0.124,
+        "from_2011": 0.011
+      },
+      "ws": {
+        "until_2010": 0.075,
+        "from_2011": 0.026
+      }
+    },
+    "by_era_ws": {
+      "Pre-Analytics": {
+        "n": 63,
+        "coef_WS": 0.1,
+        "coef_Team_W_PCT": 0.059,
+        "r2": 0.257
+      },
+      "Transition": {
+        "n": 153,
+        "coef_WS": 0.165,
+        "coef_Team_W_PCT": 0.072,
+        "r2": 0.499
+      },
+      "Small-Ball": {
+        "n": 88,
+        "coef_WS": 0.205,
+        "coef_Team_W_PCT": 0.068,
+        "r2": 0.413
+      }
+    },
+    "seasons": [
+      {
+        "season": "2001-02",
+        "winner": "Tim Duncan",
+        "choice_ws": "Tim Duncan",
+        "gap_ws": 0.0,
+        "choice_pie": "Tim Duncan",
+        "gap_pie": 0.0,
+        "same_choice": true
+      },
+      {
+        "season": "2002-03",
+        "winner": "Tim Duncan",
+        "choice_ws": "Tim Duncan",
+        "gap_ws": 0.0,
+        "choice_pie": "Tim Duncan",
+        "gap_pie": 0.0,
+        "same_choice": true
+      },
+      {
+        "season": "2003-04",
+        "winner": "Kevin Garnett",
+        "choice_ws": "Kevin Garnett",
+        "gap_ws": 0.0,
+        "choice_pie": "Kevin Garnett",
+        "gap_pie": 0.0,
+        "same_choice": true
+      },
+      {
+        "season": "2004-05",
+        "winner": "Steve Nash",
+        "choice_ws": "Dirk Nowitzki",
+        "gap_ws": 0.172,
+        "choice_pie": "Tim Duncan",
+        "gap_pie": 0.364,
+        "same_choice": false
+      },
+      {
+        "season": "2005-06",
+        "winner": "Steve Nash",
+        "choice_ws": "Dirk Nowitzki",
+        "gap_ws": 0.297,
+        "choice_pie": "Dirk Nowitzki",
+        "gap_pie": 0.315,
+        "same_choice": true
+      },
+      {
+        "season": "2006-07",
+        "winner": "Dirk Nowitzki",
+        "choice_ws": "Dirk Nowitzki",
+        "gap_ws": 0.0,
+        "choice_pie": "Dirk Nowitzki",
+        "gap_pie": 0.0,
+        "same_choice": true
+      },
+      {
+        "season": "2007-08",
+        "winner": "Kobe Bryant",
+        "choice_ws": "Chris Paul",
+        "gap_ws": 0.189,
+        "choice_pie": "Kevin Garnett",
+        "gap_pie": 0.353,
+        "same_choice": false
+      },
+      {
+        "season": "2008-09",
+        "winner": "LeBron James",
+        "choice_ws": "LeBron James",
+        "gap_ws": 0.0,
+        "choice_pie": "LeBron James",
+        "gap_pie": 0.0,
+        "same_choice": true
+      },
+      {
+        "season": "2009-10",
+        "winner": "LeBron James",
+        "choice_ws": "LeBron James",
+        "gap_ws": 0.0,
+        "choice_pie": "LeBron James",
+        "gap_pie": 0.0,
+        "same_choice": true
+      },
+      {
+        "season": "2010-11",
+        "winner": "Derrick Rose",
+        "choice_ws": "LeBron James",
+        "gap_ws": 0.092,
+        "choice_pie": "LeBron James",
+        "gap_pie": 0.207,
+        "same_choice": true
+      },
+      {
+        "season": "2011-12",
+        "winner": "LeBron James",
+        "choice_ws": "LeBron James",
+        "gap_ws": 0.0,
+        "choice_pie": "LeBron James",
+        "gap_pie": 0.0,
+        "same_choice": true
+      },
+      {
+        "season": "2012-13",
+        "winner": "LeBron James",
+        "choice_ws": "LeBron James",
+        "gap_ws": 0.0,
+        "choice_pie": "LeBron James",
+        "gap_pie": 0.0,
+        "same_choice": true
+      },
+      {
+        "season": "2013-14",
+        "winner": "Kevin Durant",
+        "choice_ws": "Kevin Durant",
+        "gap_ws": 0.0,
+        "choice_pie": "Kevin Durant",
+        "gap_pie": 0.0,
+        "same_choice": true
+      },
+      {
+        "season": "2014-15",
+        "winner": "Stephen Curry",
+        "choice_ws": "Stephen Curry",
+        "gap_ws": 0.0,
+        "choice_pie": "Stephen Curry",
+        "gap_pie": 0.0,
+        "same_choice": true
+      },
+      {
+        "season": "2015-16",
+        "winner": "Stephen Curry",
+        "choice_ws": "Stephen Curry",
+        "gap_ws": 0.0,
+        "choice_pie": "Stephen Curry",
+        "gap_pie": 0.0,
+        "same_choice": true
+      },
+      {
+        "season": "2016-17",
+        "winner": "Russell Westbrook",
+        "choice_ws": "James Harden",
+        "gap_ws": 0.161,
+        "choice_pie": "Russell Westbrook",
+        "gap_pie": 0.0,
+        "same_choice": false
+      },
+      {
+        "season": "2017-18",
+        "winner": "James Harden",
+        "choice_ws": "James Harden",
+        "gap_ws": 0.0,
+        "choice_pie": "James Harden",
+        "gap_pie": 0.0,
+        "same_choice": true
+      },
+      {
+        "season": "2018-19",
+        "winner": "Giannis Antetokounmpo",
+        "choice_ws": "Giannis Antetokounmpo",
+        "gap_ws": 0.0,
+        "choice_pie": "Giannis Antetokounmpo",
+        "gap_pie": 0.0,
+        "same_choice": true
+      },
+      {
+        "season": "2019-20",
+        "winner": "Giannis Antetokounmpo",
+        "choice_ws": "Giannis Antetokounmpo",
+        "gap_ws": 0.0,
+        "choice_pie": "Giannis Antetokounmpo",
+        "gap_pie": 0.0,
+        "same_choice": true
+      },
+      {
+        "season": "2020-21",
+        "winner": "Nikola Jokic",
+        "choice_ws": "Nikola Jokic",
+        "gap_ws": 0.0,
+        "choice_pie": "Joel Embiid",
+        "gap_pie": 0.112,
+        "same_choice": false
+      },
+      {
+        "season": "2021-22",
+        "winner": "Nikola Jokic",
+        "choice_ws": "Nikola Jokic",
+        "gap_ws": 0.0,
+        "choice_pie": "Nikola Jokic",
+        "gap_pie": 0.0,
+        "same_choice": true
+      },
+      {
+        "season": "2022-23",
+        "winner": "Joel Embiid",
+        "choice_ws": "Nikola Jokic",
+        "gap_ws": 0.157,
+        "choice_pie": "Nikola Jokic",
+        "gap_pie": 0.025,
+        "same_choice": true
+      }
+    ]
+  },
   "narrative_cases": {
     "team_collapse": [
       {

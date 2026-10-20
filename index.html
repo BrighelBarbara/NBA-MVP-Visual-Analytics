@@ -11,86 +11,58 @@
 <body>
     <header class="navbar">
         <h1>🏀 NBA MVP Visual Analytics Explorer (1996–2023)</h1>
-        <p class="subtitle">Analisi Multidimensionale, Riduzione PCA ed Evoluzione Tattica delle Votazioni MVP</p>
+        <p class="subtitle">L'MVP premia il merito o la narrativa? Ogni selezione ristima come hanno votato i giornalisti.</p>
     </header>
 
     <div class="dashboard-grid">
-        <!-- QUADRANTE A: Scatterplot PCA -->
+        <!-- (A) Scatterplot PCA -->
         <section class="card" id="pca-card">
             <h2>Spatial PCA Projection (PC1 vs PC2)</h2>
-            <p class="card-desc">Fai <strong>Brushing (seleziona un'area)</strong> per filtrare, <strong>passa sopra un punto</strong> per i dettagli, oppure <strong>clicca un singolo punto</strong> per un confronto dettagliato con i vincitori storici della sua era. I filtri di PCA, PCP ed era si combinano.</p>
+            <p class="card-desc">Brush per selezionare · click su un punto per il dettaglio · click su un'era per filtrarla.</p>
             <div id="pca-legend" class="legend"></div>
-            <div id="pca-plot"></div>
+            <div id="pca-plot" class="chart"></div>
         </section>
 
-        <!-- QUADRANTE B: Parallel Coordinates Plot (PCP) -->
+        <!-- (C) Parallel Coordinates Plot -->
         <section class="card" id="pcp-card">
-            <h2>Parallel Coordinates Plot (PCP)</h2>
-            <p class="card-desc">Fai <strong>Brushing verticale sugli assi</strong> per filtrare range specifici, <strong>clicca una linea</strong> per il confronto dettagliato, o <strong>clicca l'etichetta di un asse</strong> per mostrare quella statistica in Line Chart e Box Plot.</p>
-            <div id="pcp-plot"></div>
+            <h2>Parallel Coordinates Plot: merito vs voto</h2>
+            <p class="card-desc">Ultimo tratto: voto atteso dalle statistiche → voto reale. <span class="pos">Blu</span> = più voti del previsto, <span class="neg">rosso</span> = meno.</p>
+            <div id="pcp-plot" class="chart"></div>
         </section>
 
-        <!-- PANNELLO E: Sidebar Analytics -->
+        <!-- (E) Sidebar -->
         <aside class="card" id="sidebar-card">
-            <h2>Analytics & Selected Candidate</h2>
-            <div id="sidebar-content">
-                <div id="selected-player-info" class="info-box">
-                    <p><em>Seleziona un punto sulla PCA o sul PCP per vedere i dettagli e la classifica ricalcolata.</em></p>
-                </div>
-                <a id="reset-all-filters" class="reset-link" href="#" style="display:none">↺ azzera tutti i filtri</a>
-                <hr>
-                <h3 id="top-mvp-title">Top 5 MVP Score</h3>
-                <ol id="top-mvp-list" class="ranking-list"></ol>
-                <p id="score-weights" class="score-note"></p>
+            <h2>Analytics</h2>
+            <div id="selected-player-info" class="info-box">
+                <p><em>Clicca un candidato (PCA, PCP o liste qui sotto) per vedere voto reale vs atteso e la scelta statistica della sua stagione.</em></p>
             </div>
+
+            <h3 id="model-title">Come vota la selezione</h3>
+            <div id="model-panel"></div>
+
+            <h3>Premiati e snobbati dalla narrativa</h3>
+            <div id="narrative-panel" class="narrative-panel"></div>
+
+            <h3 id="top-mvp-title">Top 3 MVP Score</h3>
+            <ol id="top-mvp-list" class="ranking-list"></ol>
+            <p id="score-weights" class="score-note"></p>
+
+            <a id="reset-all-filters" class="reset-link" href="#" style="display:none">↺ azzera tutti i filtri</a>
         </aside>
 
-        <!-- QUADRANTE C: Line Chart (Serie Storica) -->
+        <!-- (B) Line Chart -->
         <section class="card" id="line-card">
-            <h2 id="linechart-title">Media stagionale di PTS: tutti i candidati MVP</h2>
-            <p class="card-desc" id="linechart-desc">Media per stagione dei candidati MVP (non dell'intera lega). Clicca l'etichetta di un asse nel PCP per cambiare statistica. Trascina sull'asse orizzontale per calcolare il trend (regressione lineare) sul periodo selezionato.</p>
-            <div id="line-chart"></div>
+            <h2 id="linechart-title">Share attesa: MVP reale vs scelta statistica</h2>
+            <p class="card-desc" id="linechart-desc">Trascina sulla timeline per la tendenza del periodo · click su un'etichetta del PCP per cambiare statistica.</p>
+            <div id="line-chart" class="chart"></div>
         </section>
 
-        <!-- QUADRANTE D: Box Plot Comparativo -->
+        <!-- (D) Box Plot -->
         <section class="card" id="boxplot-card">
-            <h2 id="boxplot-title">Comparative Metric Distribution</h2>
-            <p class="card-desc" id="boxplot-desc">Distribuzione dei Punti (PTS) per era, sulla selezione corrente.</p>
-            <div id="boxplot-chart"></div>
+            <h2 id="boxplot-title">PIE per era · come vota ogni era</h2>
+            <p class="card-desc" id="boxplot-desc"></p>
+            <div id="boxplot-chart" class="chart"></div>
         </section>
-    </div>
-
-    <!-- MODULO INSIGHTS: risultati dell'analisi "chi lo merita davvero?" -->
-    <div class="dashboard-grid insights-grid">
-        <section class="card" id="reliability-card">
-            <h2>Affidabilità per metrica e per era</h2>
-            <p class="card-desc">% di stagioni in cui il vincitore reale era anche il candidato #1 su quella statistica. <strong>Clicca una barra</strong> per filtrare quell'era su tutte le viste (di nuovo per rimuovere il filtro).</p>
-            <div id="reliability-chart"></div>
-        </section>
-
-        <section class="card" id="fatigue-card">
-            <h2>Bonus di fiducia vs "voter fatigue"</h2>
-            <p class="card-desc">Scarto tra il voto ricevuto e quello atteso da un modello Share ~ PIE + Team_W_PCT, per chi ha vinto l'MVP l'anno precedente. <strong>Clicca una barra</strong> per selezionare quel giocatore/stagione.</p>
-            <div id="fatigue-chart"></div>
-        </section>
-
-        <aside class="card" id="insight-callout-card">
-            <h2>Il caso più anomalo</h2>
-            <div id="insight-callout" class="info-box"></div>
-        </aside>
-    </div>
-
-    <div class="dashboard-grid threshold-grid">
-        <section class="card" id="threshold-card">
-            <h2>Effetto-soglia: quando il voto crolla quasi certamente</h2>
-            <p class="card-desc">Tra i candidati già statisticamente forti (rank ≤5 su PIE nella loro stagione, n=135), % con voto quasi azzerato (Share &lt; 10%) in base al record di squadra.</p>
-            <div id="threshold-chart"></div>
-        </section>
-
-        <aside class="card" id="threshold-callout-card">
-            <h2>Cosa dice il dato</h2>
-            <div id="threshold-callout" class="info-box"></div>
-        </aside>
     </div>
 
     <script src="js/app.js"></script>

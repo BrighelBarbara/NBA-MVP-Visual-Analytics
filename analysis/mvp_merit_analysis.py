@@ -221,6 +221,250 @@ def mvp_score_weights(rows):
     }
 
 
+VOTE_FEATURES = ["PIE", "Team_W_PCT"]
+
+
+def vote_model(rows, n_boot=2000, seed=0):
+    """Modello del voto: MVP_Share ~ z(PIE) + z(Team_W_PCT), regressione
+    lineare. E' lo STESSO modello che la dashboard ristima in tempo reale
+    sulla selezione (js/app.js -> fitVoteModel): z-score calcolati sull'intero
+    dataset, cosi' i coefficienti di selezioni diverse sono confrontabili.
+
+    - share attesa = quanto voto "meriterebbe" un candidato dati merito
+      individuale (PIE) e contesto di squadra (Team_W_PCT);
+    - narrativa = share reale - share attesa (proxy dichiarato: non ci sono
+      dati sui media, e' la parte di voto che le statistiche non spiegano);
+    - scelta statistica = candidato con la share attesa piu' alta della
+      stagione; dove non coincide col vincitore reale, il voto e' andato
+      "contro" le statistiche.
+    Per era: coefficienti con intervallo bootstrap al 95%."""
+    pts = [(r, to_f(r["PIE"]), to_f(r["Team_W_PCT"]), to_f(r["MVP_Share"])) for r in rows]
+    pts = [p for p in pts if None not in p[1:]]
+    X_raw = np.array([[p[1], p[2]] for p in pts])
+    mu, sd = X_raw.mean(axis=0), X_raw.std(axis=0, ddof=1)
+    Z = (X_raw - mu) / sd
+    y = np.array([p[3] for p in pts])
+    eras = np.array([p[0]["Tactical_Era"] for p in pts])
+
+    model = LinearRegression().fit(Z, y)
+    expected = model.predict(Z)
+
+    def fit(idx):
+        m = LinearRegression().fit(Z[idx], y[idx])
+        return m.coef_, m.score(Z[idx], y[idx])
+
+    rng = np.random.default_rng(seed)
+    by_era, boot = {}, {}
+    for era in ERAS:
+        idx = np.where(eras == era)[0]
+        coef, r2 = fit(idx)
+        samples = np.array([fit(rng.choice(idx, size=len(idx), replace=True))[0] for _ in range(n_boot)])
+        boot[era] = samples
+        lo, hi = np.percentile(samples, [2.5, 97.5], axis=0)
+        by_era[era] = {
+            "n": int(len(idx)),
+            "r2": round(float(r2), 3),
+            "coef": {f: round(float(c), 3) for f, c in zip(VOTE_FEATURES, coef)},
+            "ci95": {f: [round(float(lo[i]), 3), round(float(hi[i]), 3)] for i, f in enumerate(VOTE_FEATURES)},
+            "pie_to_team_ratio": round(float(coef[0] / coef[1]), 2),
+        }
+    diff = boot["Small-Ball"][:, 0] - boot["Pre-Analytics"][:, 0]
+
+    # Scelta statistica vs vincitore reale, stagione per stagione
+    by_season = defaultdict(list)
+    for (r, *_), e in zip(pts, expected):
+        by_season[r["Season"]].append((r, float(e)))
+    seasons = []
+    for season in sorted(by_season):
+        cands = by_season[season]
+        choice_r, choice_e = max(cands, key=lambda c: c[1])
+        winner = next(((r, e) for r, e in cands if r["Is_MVP_Winner"] == "1"), None)
+        if not winner:
+            continue
+        w_r, w_e = winner
+        seasons.append({
+            "season": season,
+            "era": w_r["Tactical_Era"],
+            "winner": w_r["Player"],
+            "winner_expected": round(w_e, 3),
+            "statistical_choice": choice_r["Player"],
+            "choice_expected": round(choice_e, 3),
+            "merit_gap": round(choice_e - w_e, 3),
+            "matches": choice_r["Player"] == w_r["Player"],
+        })
+    mismatches = [s for s in seasons if not s["matches"]]
+    big = [s for s in mismatches if s["merit_gap"] >= 0.15]
+
+    # Serie piu' lunga di stagioni consecutive (fino all'ultima) senza
+    # "MVP controcorrente" (scarto >= 0.15)
+    streak = 0
+    for s in reversed(seasons):
+        if s["merit_gap"] >= 0.15:
+            break
+        streak += 1
+
+    return {
+        "features": VOTE_FEATURES,
+        "standardization": {f: {"mean": round(float(mu[i]), 4), "std": round(float(sd[i]), 4)} for i, f in enumerate(VOTE_FEATURES)},
+        "global": {
+            "r2": round(float(model.score(Z, y)), 3),
+            "intercept": round(float(model.intercept_), 4),
+            "coef": {f: round(float(c), 4) for f, c in zip(VOTE_FEATURES, model.coef_)},
+        },
+        "by_era": by_era,
+        "pie_coef_diff_smallball_vs_preanalytics": {
+            "mean": round(float(diff.mean()), 3),
+            "ci95": [round(float(x), 3) for x in np.percentile(diff, [2.5, 97.5])],
+            "p_diff_le_0": round(float((diff <= 0).mean()), 4),
+        },
+        "seasons": seasons,
+        "n_matches": len(seasons) - len(mismatches),
+        "n_seasons": len(seasons),
+        "big_mismatches": big,
+        "seasons_since_last_big_mismatch": streak,
+    }
+
+
+def _fit_vote(rows, merit_col):
+    """Stesso modello di vote_model, con un indicatore di merito a scelta:
+    Share ~ z(merit) + z(Team_W_PCT). Restituisce share attesa per riga e R²."""
+    pts = [(r, to_f(r[merit_col]), to_f(r["Team_W_PCT"]), to_f(r["MVP_Share"])) for r in rows]
+    pts = [p for p in pts if None not in p[1:]]
+    X = np.array([[p[1], p[2]] for p in pts])
+    Z = (X - X.mean(axis=0)) / X.std(axis=0, ddof=1)
+    y = np.array([p[3] for p in pts])
+    m = LinearRegression().fit(Z, y)
+    return [p[0] for p in pts], m.predict(Z), y, float(m.score(Z, y))
+
+
+def position_effect(rows, vote):
+    """Insight guardie vs lunghi. PC1 della PCA separa i profili da guardia
+    (PC1 < 0: assist, tiro da 3, contropiede) da quelli da lungo (PC1 > 0:
+    rimbalzi, stoppate). Si confronta la narrativa (share reale - attesa)
+    dei due gruppi, in totale e per era, e la posizione su PC1 di MVP reale e
+    scelta statistica negli MVP controcorrente."""
+    from scipy import stats
+
+    rows_m, expected, y, _ = _fit_vote(rows, "PIE")
+    narr = y - expected
+    pc1 = np.array([to_f(r["PC1"]) for r in rows_m])
+    eras = np.array([r["Tactical_Era"] for r in rows_m])
+    guard = pc1 < 0
+
+    def compare(mask):
+        g, b = narr[mask & guard], narr[mask & ~guard]
+        t = stats.ttest_ind(g, b, equal_var=False)
+        return {
+            "guards": {"n": int(len(g)), "mean_narrative": round(float(g.mean()), 3)},
+            "bigs": {"n": int(len(b)), "mean_narrative": round(float(b.mean()), 3)},
+            "diff": round(float(g.mean() - b.mean()), 3),
+            "welch_t": round(float(t.statistic), 2),
+            "p_value": round(float(t.pvalue), 4),
+        }
+
+    everyone = np.ones(len(rows_m), dtype=bool)
+    by_name = {(r["Player"], r["Season"]): r for r in rows}
+    shifts = []
+    for s in vote["big_mismatches"]:
+        w = by_name[(s["winner"], s["season"])]
+        c = by_name[(s["statistical_choice"], s["season"])]
+        shifts.append({
+            "season": s["season"],
+            "winner": s["winner"], "winner_pc1": round(to_f(w["PC1"]), 2), "winner_ast": to_f(w["AST"]),
+            "choice": s["statistical_choice"], "choice_pc1": round(to_f(c["PC1"]), 2), "choice_ast": to_f(c["AST"]),
+            "guard_over_big": to_f(w["PC1"]) < 0 <= to_f(c["PC1"]),
+        })
+    winners_by_era = {}
+    for era in ERAS:
+        ws = [r for r in rows if r["Is_MVP_Winner"] == "1" and r["Tactical_Era"] == era]
+        winners_by_era[era] = {
+            "guards": sum(1 for r in ws if to_f(r["PC1"]) < 0),
+            "bigs": sum(1 for r in ws if to_f(r["PC1"]) >= 0),
+        }
+    return {
+        "split": "PC1 < 0 = profilo da guardia/esterno, PC1 >= 0 = profilo da lungo",
+        "corr_pc1_narrative": round(float(np.corrcoef(pc1, narr)[0, 1]), 3),
+        "overall": compare(everyone),
+        "by_era": {era: compare(eras == era) for era in ERAS},
+        "big_mismatch_shifts": shifts,
+        "n_guard_over_big": sum(1 for x in shifts if x["guard_over_big"]),
+        "winners_by_era": winners_by_era,
+    }
+
+
+def robustness_ws(rows, vote):
+    """Controllo di robustezza: stesso modello con WS (Win Shares) al posto di
+    PIE come misura del merito individuale. WS manca per le stagioni
+    1996-97 - 2000-01, quindi il confronto e' sulle stagioni in cui tutti i
+    candidati hanno WS. Per ogni stagione si confronta la scelta statistica
+    dei due modelli e si verifica se gli MVP controcorrente restano gli stessi."""
+    complete = {}
+    for r in rows:
+        complete.setdefault(r["Season"], True)
+        if to_f(r["WS"]) is None:
+            complete[r["Season"]] = False
+    seasons_ok = sorted(s for s, ok in complete.items() if ok)
+    sub = [r for r in rows if r["Season"] in seasons_ok]
+
+    rows_m, expected, _, r2 = _fit_vote(sub, "WS")
+    by_season = defaultdict(list)
+    for r, e in zip(rows_m, expected):
+        by_season[r["Season"]].append((r, float(e)))
+    pie_by_season = {s["season"]: s for s in vote["seasons"]}
+
+    out = []
+    for season in seasons_ok:
+        cands = by_season[season]
+        choice_r, choice_e = max(cands, key=lambda c: c[1])
+        w_r, w_e = next((r, e) for r, e in cands if r["Is_MVP_Winner"] == "1")
+        pie = pie_by_season[season]
+        out.append({
+            "season": season,
+            "winner": w_r["Player"],
+            "choice_ws": choice_r["Player"],
+            "gap_ws": round(choice_e - w_e, 3),
+            "choice_pie": pie["statistical_choice"],
+            "gap_pie": pie["merit_gap"],
+            "same_choice": choice_r["Player"] == pie["statistical_choice"],
+        })
+    # Pesi per era con WS (z-score su tutte le righe con WS), per verificare
+    # l'Insight 2 con una misura di merito diversa
+    rows_ws = [r for r in rows if to_f(r["WS"]) is not None]
+    X = np.array([[to_f(r["WS"]), to_f(r["Team_W_PCT"])] for r in rows_ws])
+    Z = (X - X.mean(axis=0)) / X.std(axis=0, ddof=1)
+    y = np.array([to_f(r["MVP_Share"]) for r in rows_ws])
+    eras = np.array([r["Tactical_Era"] for r in rows_ws])
+    by_era = {}
+    for era in ERAS:
+        idx = eras == era
+        m = LinearRegression().fit(Z[idx], y[idx])
+        by_era[era] = {"n": int(idx.sum()), "coef_WS": round(float(m.coef_[0]), 3),
+                       "coef_Team_W_PCT": round(float(m.coef_[1]), 3), "r2": round(float(m.score(Z[idx], y[idx])), 3)}
+
+    def mean_gap(items, key, early):
+        vals = [x[key] for x in items if (int(x["season"][:4]) <= 2010) == early]
+        return round(float(np.mean(vals)), 3)
+
+    big_pie = {s["season"] for s in out if s["gap_pie"] >= 0.15}
+    big_ws = {s["season"] for s in out if s["gap_ws"] >= 0.15}
+    last_big_ws = max((s["season"] for s in out if s["gap_ws"] >= 0.15), default=None)
+    return {
+        "seasons_compared": len(out),
+        "first_season": seasons_ok[0],
+        "r2_ws_model": round(r2, 3),
+        "same_statistical_choice": sum(s["same_choice"] for s in out),
+        "big_mismatches_pie": sorted(big_pie),
+        "big_mismatches_ws": sorted(big_ws),
+        "last_big_mismatch_ws": last_big_ws,
+        "mean_winner_gap": {
+            "pie": {"until_2010": mean_gap(out, "gap_pie", True), "from_2011": mean_gap(out, "gap_pie", False)},
+            "ws": {"until_2010": mean_gap(out, "gap_ws", True), "from_2011": mean_gap(out, "gap_ws", False)},
+        },
+        "by_era_ws": by_era,
+        "seasons": out,
+    }
+
+
 def narrative_cases(rows):
     """Due casi aneddotici citati nel report:
     - crollo del record di squadra a parita' di merito individuale (Garnett,
@@ -376,6 +620,9 @@ def main():
         "most_anomalous_winner": mismatch[0] if mismatch else None,
         "voter_fatigue": voter_fatigue(rows),
         "mvp_score_weights": mvp_score_weights(rows),
+        "vote_model": (vm := vote_model(rows)),
+        "position_effect": position_effect(rows, vm),
+        "robustness_ws": robustness_ws(rows, vm),
         "narrative_cases": narrative_cases(rows),
         "win_rate_threshold": win_rate_threshold_effect(rows),
     }
@@ -393,6 +640,27 @@ def main():
     print(f"Modello voter-fatigue: R^2={result['voter_fatigue']['r2']}, "
           f"residuo medio incumbent={result['voter_fatigue']['mean_residual_incumbents']:+.3f} "
           f"vs altri={result['voter_fatigue']['mean_residual_others']:+.3f}")
+
+    vm = result["vote_model"]
+    print(f"Modello del voto: R^2={vm['global']['r2']} | scelta statistica = MVP reale in "
+          f"{vm['n_matches']}/{vm['n_seasons']} stagioni | MVP controcorrente (scarto>=0.15): "
+          + ", ".join(f"{s['winner']} {s['season']}" for s in vm['big_mismatches'])
+          + f" | stagioni consecutive senza: {vm['seasons_since_last_big_mismatch']}")
+    for era, e in vm["by_era"].items():
+        print(f"  {era:14s} n={e['n']:3d} R^2={e['r2']} PIE={e['coef']['PIE']} {e['ci95']['PIE']} "
+              f"W%={e['coef']['Team_W_PCT']} {e['ci95']['Team_W_PCT']}")
+    print(f"  PIE Small-Ball - Pre-Analytics: {vm['pie_coef_diff_smallball_vs_preanalytics']}")
+
+    pe = result["position_effect"]
+    print(f"Guardie vs lunghi: narrativa {pe['overall']['guards']['mean_narrative']:+.3f} vs "
+          f"{pe['overall']['bigs']['mean_narrative']:+.3f} (t={pe['overall']['welch_t']}, p={pe['overall']['p_value']}) | "
+          f"MVP controcorrente guardia su lungo: {pe['n_guard_over_big']}/{len(pe['big_mismatch_shifts'])}")
+    for era, e in pe["by_era"].items():
+        print(f"  {era:14s} diff={e['diff']:+.3f} p={e['p_value']}  MVP guardie/lunghi={pe['winners_by_era'][era]}")
+    rb = result["robustness_ws"]
+    print(f"Robustezza WS ({rb['seasons_compared']} stagioni dal {rb['first_season']}, R^2={rb['r2_ws_model']}): "
+          f"stessa scelta statistica in {rb['same_statistical_choice']}/{rb['seasons_compared']} | "
+          f"controcorrente PIE={rb['big_mismatches_pie']} WS={rb['big_mismatches_ws']}")
 
     sw = result["mvp_score_weights"]
     print(f"Pesi MVP Score (R^2={sw['r2']}, n={sw['n']}): {sw['weights']}")

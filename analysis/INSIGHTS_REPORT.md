@@ -1,445 +1,340 @@
 # Report: "Chi vince l'MVP se lo merita davvero?"
 
-Analisi riproducibile sul dataset del progetto (`data/mvp_candidates_pca.csv`,
-354 candidati, 27 stagioni 1996-97 → 2022-23). Script: `analysis/mvp_merit_analysis.py`.
-Output dati: `data/insights/insights.json`. Integrazione visiva: modulo "Insights"
-in `index.html` / `js/app.js`.
+Base per la sezione **Discovered insights** del paper e per le slide.
+Dataset: `data/mvp_candidates_pca.csv`, 354 candidati MVP su 27 stagioni
+(1996-97 → 2022-23). Tutti i numeri sono riproducibili:
 
-Riproduci con:
 ```
-python3 analysis/mvp_merit_analysis.py
+python3 analysis/mvp_merit_analysis.py   # -> data/insights/insights.json
+python3 analysis/make_figures.py         # -> analysis/figures/*.png
 ```
+
+La dashboard ricalcola dal vivo gli stessi modelli (stessi coefficienti,
+verificati: R² globale 0,459 sia in Python sia in `js/app.js`), quindi ogni
+insight qui sotto si **ritrova interagendo** con il sistema (§4, scenari della
+demo). Lo storico tecnico delle modifiche è in `analysis/CHANGELOG.md`.
 
 ---
 
-## 1. Cosa è stato fatto
+## 1. Metodo: separare merito e narrativa
 
-Le analisi discusse informalmente (affidabilità delle metriche, caso Nash,
-crolli di voto, voter fatigue, usage-gap Curry/Durant) sono state:
+Non esistono dati sulla copertura mediatica, quindi la "narrativa" è misurata
+in modo **indiretto e dichiarato**, come parte del voto che le statistiche non
+spiegano.
 
-1. **verificate numericamente** riga per riga sul dataset reale del progetto
-   (non su dati di altra provenienza);
-2. **trasformate in uno script Python versionato** (`analysis/mvp_merit_analysis.py`),
-   così sono riproducibili da chiunque clonando la repo, non solo raccontabili a voce;
-3. **integrate visivamente e in modo interattivo** nella dashboard, non lasciate
-   solo nel report testuale.
+**Modello del voto.** Regressione lineare
+`MVP_Share ~ z(PIE) + z(Team_W_PCT)` sui 354 candidati:
+- **PIE** (Player Impact Estimate) = merito individuale. È la singola
+  statistica che più spesso indica il vincitore (70% delle stagioni, Fig. 5);
+- **Team_W_PCT** = contesto di squadra;
+- z-score calcolati sull'intero dataset, così i coefficienti stimati su
+  sottoinsiemi diversi (ere, selezioni) sono **confrontabili**.
 
-Modifiche al codice:
-- `analysis/mvp_merit_analysis.py` (nuovo) — calcola i 4 risultati sotto ed esporta `data/insights/insights.json`.
-- `js/app.js` — carica `insights.json` insieme al CSV; aggiunge legenda, annotazione persistente sul caso più anomalo, due nuovi grafici D3 interattivi, callout narrativo.
-- `css/styles.css` — stili per legenda, grafici, tooltip; **palette colori delle ere sostituita** (vedi §3).
-- `index.html` — nuova sezione "Modulo Insights" con due grafici + callout.
+Da qui tre grandezze, per ogni candidato o stagione:
 
----
-
-## 2. Risultati (verificati sul dataset del progetto)
-
-### 2.1 Affidabilità per metrica: nessuna statistica semplice prevede l'MVP, una composita sì
-
-% di stagioni (su 27) in cui il vincitore reale era anche il candidato #1 su quella statistica:
-
-| Metrica | % top-1 | n |
+| Grandezza | Definizione | Dove si vede |
 |---|---|---|
-| **PIE** | **70.4%** | 27 |
-| WS (Win Shares) | 59.1% | 22* |
-| Team W_PCT | 40.7% | 27 |
-| PTS | 33.3% | 27 |
-| NET_RATING | 22.2% | 27 |
-| USG_PCT | 22.2% | 27 |
+| **Share attesa** | voto previsto dal modello | asse *Attesa* del PCP, Line Chart (vista iniziale) |
+| **Narrativa** | share reale − share attesa | colore del tratto Attesa → Reale nel PCP (blu sale, rosso scende), barre divergenti della sidebar |
+| **Scelta statistica** | candidato con la share attesa più alta della stagione | tratteggio e segmenti rossi nella Line Chart, collegamento in PCA al click |
 
-\* WS mancante per 5 stagioni Pre-Analytics (vedi limiti, §4).
+Un **MVP controcorrente** è una stagione in cui ha vinto un candidato diverso
+dalla scelta statistica, con uno scarto di share attesa ≥ 0,15. Sotto questa
+soglia il caso è trattato come un quasi pari merito.
 
-Per era:
+**Analytics innescata dall'interazione.** Ogni brush (PCA, assi del PCP) o
+filtro per era (legenda, Box Plot) **ristima il modello del voto sulla sola
+selezione**. Il risultato è disegnato sotto ogni era del Box Plot (barre del
+peso del merito e del record) e, nella sidebar di approfondimento, come barre
+"selezione" (pesi, R², quota di voti quasi nulli) con la tacca del modello su
+tutti i candidati.
 
-| Era | PIE | WS | PTS |
+---
+
+## 2. Insight scoperti
+
+### Insight 1 — Gli MVP "di narrativa" diventano più rari e più piccoli, non più frequenti
+
+*Ipotesi di partenza (diffusa nel dibattito sportivo): con i social media il
+voto è diventato più narrativo. I dati dicono il contrario.*
+
+La scelta statistica ha vinto l'MVP in **19 stagioni su 27**. I **6 MVP
+controcorrente** cadono tutti tra il 1997 e il 2011:
+
+| Stagione | MVP reale (share attesa) | Scelta statistica (share attesa) | Scarto |
 |---|---|---|---|
-| Pre-Analytics (1996–2004) | 66.7% | 75.0%* | 44.4% |
-| Transition (2005–2015) | 63.6% | 63.6% | 18.2% |
-| Small-Ball (2016–2023) | **85.7%** | 42.9% | 42.9% |
+| 1997-98 | Michael Jordan (35%) | Karl Malone (54%) | 0,19 |
+| 2000-01 | Allen Iverson (17%) | Shaquille O'Neal (37%) | 0,20 |
+| 2004-05 | Steve Nash (19%) | Tim Duncan (55%) | **0,36** |
+| 2005-06 | Steve Nash (23%) | Dirk Nowitzki (54%) | 0,31 |
+| 2007-08 | Kobe Bryant (19%) | Kevin Garnett (54%) | 0,35 |
+| 2010-11 | Derrick Rose (29%) | LeBron James (50%) | 0,21 |
 
-**Lettura**: il PIE è il predittore singolo più affidabile, e lo è ancora di più
-nell'era Small-Ball — il contrario di quanto ci si aspetterebbe se il voto
-moderno fosse "più guidato dai social/dalla narrativa".
+Dal 2011-12 in poi, per **12 stagioni consecutive**, ha sempre vinto la
+scelta statistica o un quasi pari merito. Le uniche due stagioni recenti non
+coerenti sono Jokic/Embiid 2020-21 (scarto 0,11) e Embiid/Jokic 2022-23
+(0,02), entrambe sotto la soglia.
 
-### 2.2 Il caso più anomalo: Steve Nash, 2004-05
+**Robustezza (§2bis).** Con WS al posto di PIE come misura del merito, i tre
+casi più netti (Nash 2005, Nash 2006, Kobe 2008) restano MVP controcorrente.
+Dopo il 2011 compaiono due casi di stretta misura, Westbrook 2016-17 (contro
+Harden) ed Embiid 2022-23 (contro Jokic), entrambi con scarto 0,16. La
+formulazione corretta è quindi: lo **scarto medio** tra MVP e scelta
+statistica crolla dopo il 2011, da 0,124 a 0,011 con PIE e da 0,075 a 0,026
+con WS (stagioni 2001–2023). Gli MVP controcorrente non spariscono del tutto,
+ma diventano rari e piccoli.
 
-Identificato **algoritmicamente** (rank peggiore su PIE+WS tra tutti i vincitori), non scelto a mano:
+> Fig. 1 — `analysis/figures/fig1_mvp_vs_scelta_statistica.png`
 
-| Metrica | Rank di Nash tra i 16 candidati |
-|---|---|
-| PIE | 11°/16 |
-| WS | 11°/16 |
-| Team W_PCT | **1°/16** |
+### Insight 2 — Cosa è cambiato: il merito individuale pesa di più, il record di squadra no
 
-Ha vinto per il record della sua squadra (Phoenix Suns), non per dominio statistico individuale — è il caso di "vittoria meno meritata statisticamente" del dataset.
+Stimando il modello separatamente per era (coefficienti standardizzati, IC
+95% bootstrap con 2000 ricampionamenti):
 
-### 2.3 Crollo di squadra vs merito individuale (4 casi anno-dopo-vittoria)
+| Era | Peso PIE | Peso record di squadra | R² |
+|---|---|---|---|
+| Pre-Analytics (1996–2004) | 0,132 [0,091; 0,175] | 0,075 [0,033; 0,122] | 0,39 |
+| Transition (2005–2015) | 0,176 [0,141; 0,208] | 0,099 [0,063; 0,132] | 0,50 |
+| Small-Ball (2016–2023) | **0,223** [0,178; 0,263] | 0,089 [0,041; 0,131] | **0,59** |
 
-| Giocatore | Anno → anno dopo | PIE | Team W_PCT | Share voti |
+- Il peso del merito individuale cresce del **69%**: differenza
+  Small-Ball − Pre-Analytics = +0,091, IC 95% [0,029; 0,150], P(Δ ≤ 0) = 0,002.
+- Il peso del record di squadra resta **costante**: i votanti non hanno smesso
+  di premiare chi vince, hanno iniziato a premiare di più chi domina.
+- La quota di voto spiegata dalle statistiche sale dal 39% al 59%.
+
+È il meccanismo dietro l'Insight 1: un voto più ancorato a una misura di
+impatto individuale lascia meno spazio a candidature costruite sul racconto
+della stagione.
+
+> Fig. 2 — `analysis/figures/fig2_pesi_voto_per_era.png`
+
+### Insight 3 — La "narrativa" premiava le guardie a scapito dei lunghi (ed è finita)
+
+È l'insight che collega la PCA alla domanda del progetto. PC1 separa i
+profili da **guardia/esterno** (PC1 < 0: assist, tiro da 3, contropiede) da
+quelli da **lungo** (PC1 > 0: rimbalzi, stoppate). Disegnando nella PCA una
+freccia dalla scelta statistica all'MVP reale per ogni MVP controcorrente:
+
+| Stagione | Scelta statistica (PC1) | → MVP reale (PC1) |
+|---|---|---|
+| 1997-98 | Karl Malone (+0,7) | Michael Jordan (−1,0) |
+| 2000-01 | Shaquille O'Neal (+4,1) | Allen Iverson (−3,7) |
+| 2004-05 | Tim Duncan (+3,9) | Steve Nash (−1,7) |
+| 2005-06 | Dirk Nowitzki (+0,2) | Steve Nash (−1,6) |
+| 2007-08 | Kevin Garnett (+3,0) | Kobe Bryant (−1,8) |
+| 2010-11 | LeBron James (−1,9) | Derrick Rose (−2,2) |
+
+**In 5 casi su 6 il voto si sposta da un lungo a una guardia**; l'eccezione
+(Rose contro LeBron) è tra due esterni. Su tutti i 354 candidati:
+
+| | Guardie (PC1 < 0) | Lunghi (PC1 ≥ 0) | Differenza | p (Welch) |
 |---|---|---|---|---|
-| Kevin Garnett | 2003-04 → 2004-05 | 0.222 → 0.213 (−4%) | 0.707 → 0.537 (−24%) | 0.991 → 0.012 |
-| Dirk Nowitzki | 2006-07 → 2007-08 | 0.201 → 0.176 (−12%) | 0.821 → 0.636 (−23%) | 0.882 → 0.004 |
-| Steve Nash | 2004-05 → 2005-06 | 0.145 → 0.166 (+14%) | 0.800 → 0.684 (−14%) | 0.839 → 0.739 |
-| Stephen Curry | 2015-16 → 2016-17 | 0.197 → 0.151 (−23%) | 0.899 → 0.823 (−8%) | 1.000 → 0.051 |
+| Tutte le ere | +0,028 (n=213) | −0,042 (n=141) | +0,070 | 0,002 |
+| Pre-Analytics | | | +0,071 | 0,09 |
+| Transition | | | **+0,120** | **< 0,001** |
+| Small-Ball | | | +0,027 | 0,56 |
 
-**Lettura**: Garnett e Nowitzki hanno statistiche individuali quasi identiche
-all'anno prima, ma il voto crolla a zero perché la squadra scende sotto la
-soglia critica ~60-65% di vittorie. Curry è il caso più interessante: la
-squadra resta fortissima (82%) eppure il voto crolla comunque — un indizio di
-un effetto narrativo/di "stanchezza del voto" che va oltre la performance.
+(valori = narrativa media, share reale − attesa)
 
-### 2.4 Arrivo di un secondo protagonista: il divario di utilizzo crolla
+- Il premio di narrativa per le guardie è **forte nell'era Transition**, in cui
+  10 MVP su 11 sono guardie o esterni, e coincide con il periodo degli MVP
+  controcorrente.
+- Nell'era Small-Ball il premio **sparisce** (differenza non significativa) e
+  tornano a vincere i lunghi: 3 MVP su 7 hanno profilo da lungo (Giannis ×2,
+  Jokic 2021-22), e Jokic 2020-21 ed Embiid 2022-23, due centri, cadono sulla
+  linea (PC1 ≈ 0) perché il loro gioco include molti passaggi. Nell'era
+  Transition era 1 su 11. Ironia del nome: proprio l'era "small-ball" riporta
+  l'MVP ai lunghi, perché le statistiche d'impatto, ora pesate di più
+  (Insight 2), li valorizzano.
+- La correlazione tra PC1 e narrativa è debole (−0,17): il ruolo spiega una
+  parte della narrativa, non tutta.
 
-| Stagione | Leader USG_PCT (GSW) | Secondo | Divario |
+> Fig. 6 — `analysis/figures/fig6_pca_spostamento_guardie.png`
+
+### Insight 4 — Sotto il 55% di vittorie il merito individuale non basta
+
+Tra i 135 candidati già statisticamente da MVP (top 5 su PIE nella propria
+stagione), la quota con voto quasi azzerato (share < 10%) in base al record
+di squadra:
+
+| Record di squadra | n | Voto crollato | Share media |
 |---|---|---|---|
-| 2015-16 (prima di Durant) | Curry 0.314 | Draymond Green 0.184 | **0.130** |
-| 2016-17 (dopo Durant) | Curry 0.286 | Kevin Durant 0.271 | **0.015** |
+| < 55% | 19 | **89,5%** | 0,068 |
+| 55–65% | 34 | 32,4% | 0,283 |
+| ≥ 65% | 82 | 18,3% | 0,512 |
 
-Il divario crolla di ~9 volte nello stesso anno in cui il voto MVP di Curry crolla del 95%.
+L'ipotesi iniziale (soglia al 60–65%, nata da 4 casi aneddotici: Garnett,
+Nowitzki, Nash, Curry) è stata **corretta** dalla verifica sul campione
+completo: il fenomeno era giusto, il punto di rottura no. Nella dashboard si
+vede filtrando nel PCP i candidati con PIE alto e record sotto il 55%: i tratti
+Attesa → Reale diventano quasi tutti rossi e cadono verso lo 0, e nel modello
+ristimato su questo gruppo la barra del peso del merito sparisce (conta solo il
+record di squadra).
 
-### 2.5 Voter fatigue vs "bonus di fiducia" (modello Share ~ PIE + Team_W_PCT)
+> Fig. 3 — `analysis/figures/fig3_soglia_record_squadra.png`
 
-Modello: regressione lineare, R² = **0.459**, su tutti i 354 candidati.
-Residuo medio per chi ha vinto l'MVP l'anno precedente: **+0.111** (n=23) — in
-media un *bonus*, non una penalità — contro **−0.008** per tutti gli altri.
+### Insight 5 — L'MVP uscente riceve un bonus di fiducia, salvo crollo della squadra
 
-La media nasconde due gruppi opposti:
+Per i 23 candidati che avevano vinto l'MVP l'anno prima, la narrativa media è
+**+0,111** contro −0,008 per tutti gli altri: in media un *bonus*, non la
+"voter fatigue" spesso citata. La media nasconde due gruppi opposti:
 
-| Crollo (residuo più negativo) | Bonus (residuo più positivo) |
+| Bonus (narrativa più alta) | Crollo (narrativa più bassa) |
 |---|---|
-| Kevin Garnett 2004-05: **−0.406** | Steve Nash 2005-06: **+0.512** |
-| Dirk Nowitzki 2007-08: **−0.249** | Steve Nash 2006-07: **+0.484** |
-| Russell Westbrook 2017-18: **−0.204** | Stephen Curry 2015-16: **+0.374** |
-| Stephen Curry 2016-17: **−0.196** | James Harden 2018-19: **+0.330** |
-| Karl Malone 1999-00: **−0.182** | LeBron James 2009-10: **+0.308** |
+| Steve Nash 2005-06: +0,51 | Kevin Garnett 2004-05: −0,41 |
+| Steve Nash 2006-07: +0,48 | Dirk Nowitzki 2007-08: −0,25 |
+| Stephen Curry 2015-16: +0,37 | Russell Westbrook 2017-18: −0,20 |
 
-(elenco completo dei 23 casi in `data/insights/insights.json → voter_fatigue.incumbent_cases`)
+Garnett e Nowitzki hanno un PIE quasi invariato rispetto all'anno dell'MVP
+(−4%, −12%), ma la squadra scende al 54% e al 64% di vittorie, le due fasce
+in cui il voto dei candidati forti crolla nell'89% e nel 32% dei casi
+(Insight 4), e il loro voto va a zero. Nash vince due volte di fila senza
+essere la scelta statistica di nessuna delle due stagioni: è il caso più
+solido di voto guidato dalla reputazione.
 
-**Lettura**: Steve Nash è il personaggio ricorrente — compare come outlier in
-**tre** analisi indipendenti (rank peggiore nell'anno di vittoria, §2.2; e
-bonus di fiducia più alto di tutti nei due anni successivi qui). È il caso più
-solido di "voto guidato da reputazione più che da merito statistico puro" in
-tutto il dataset.
+> Fig. 4 — `analysis/figures/fig4_mvp_uscenti.png`
 
-### 2.6 Effetto-soglia sul record di squadra: la vera soglia è ~55%, non 60-65%
+### Insight 6 — Due stelle nella stessa squadra si dividono (e perdono) il voto
 
-Le note originali ipotizzavano una soglia critica al 60-65% di vittorie,
-basandosi su soli 4 casi aneddotici (Garnett, Nowitzki, Nash, Curry — §2.3).
-Verificato quantitativamente su tutto il campione: filtrando ai **135
-candidati già statisticamente forti** (rank ≤5 su PIE nella propria stagione,
-così un voto basso non si spiega con "non era abbastanza bravo"), % con voto
-quasi azzerato (Share < 0.10) in base al record di squadra:
+Il candidato più snobbato del dataset è **Kevin Durant 2016-17** (narrativa
+−0,48, share 0,2%): è la stagione del suo arrivo ai Warriors. Nella stessa
+stagione anche il voto di Curry, MVP uscente all'unanimità, crolla (share
+1,00 → 0,05, narrativa −0,20). Il divario di utilizzo offensivo tra Curry e il
+secondo violino passa da 0,130 (Draymond Green, 2015-16) a 0,015 (Durant): i
+votanti non premiano nessuno dei due protagonisti di un superteam.
+È un **caso singolo**: va presentato come esempio, non come regola (vedi
+limiti).
 
-| Record di squadra | n | % voto crollato | Share media |
+### Caso di studio — Steve Nash 2004-05, il vincitore più anomalo
+
+Il vincitore con il rank peggiore su PIE + WS tra i candidati della propria
+stagione (individuato in modo algoritmico): 11°/16 su PIE, 11°/16 su WS, ma
+1°/16 per record di squadra. Share attesa 19%, reale 84% (narrativa +0,65);
+la scelta statistica era Tim Duncan (55%). Lo stesso anno il candidato 1° su
+PIE, Kevin Garnett, prende l'1,2% dei voti. Nella dashboard, cliccando Nash
+nella PCA, una linea tratteggiata lo collega a Duncan.
+
+### 2bis. Controllo di robustezza: WS al posto di PIE
+
+Lo stesso modello è stato ristimato con **WS** (Win Shares) come misura del
+merito individuale, sulle 22 stagioni in cui tutti i candidati hanno WS
+(2001-02 → 2022-23; R² = 0,39).
+
+| Verifica | Con PIE | Con WS | Regge? |
 |---|---|---|---|
-| < 55% | 19 | **89.5%** | 0.068 |
-| 55–65% | 34 | **32.4%** | 0.283 |
-| ≥ 65% | 82 | **18.3%** | 0.512 |
+| Stessa scelta statistica | — | 18/22 stagioni | sì |
+| MVP controcorrente 2005–2008 (Nash ×2, Kobe) | sì | sì | **sì** |
+| Rose 2010-11 | 0,21 | 0,09 (sotto soglia) | no |
+| MVP controcorrente dopo il 2011 | nessuno | Westbrook 2016-17, Embiid 2022-23 (0,16) | in parte |
+| Scarto medio MVP–scelta, fino al 2010 → dal 2011 | 0,124 → 0,011 | 0,075 → 0,026 | **sì** |
+| Peso del merito per era (Pre → Trans → Small) | 0,13 → 0,18 → 0,22 | 0,10 → 0,17 → 0,21 | **sì** |
+| Peso del record per era | 0,08 → 0,10 → 0,09 | 0,06 → 0,07 → 0,07 | **sì** (piatto) |
 
-**Lettura**: l'ipotesi originale non era sbagliata (60-65% resta dentro la
-"zona di rischio"), ma il salto più netto avviene prima, verso il **55%**: da
-quel punto in giù, quasi 9 candidati su 10 statisticamente da MVP vengono
-comunque azzerati nel voto. Sopra il 65% il rischio scende sotto il 20%. È un
-buon esempio di come i 4 casi aneddotici avessero individuato il fenomeno
-giusto ma non il punto esatto — verificarlo su tutto il campione ha corretto
-la stima, non il fenomeno.
+**Lettura.** Le conclusioni principali (merito sempre più pesante, record
+costante, scarto medio in forte calo) non dipendono dalla metrica scelta. La
+frase "nessun MVP controcorrente dopo il 2011" vale solo con PIE: con WS
+compaiono due casi di stretta misura. Per questo l'Insight 1 parla di MVP
+controcorrente "più rari e più piccoli".
 
----
-
-## 3. Cosa è cambiato nella dashboard
-
-- **Legenda aggiunta** (era mancante — rischio penalità diretta -2 punti da regolamento d'esame).
-- **Palette colori delle ere corretta**: la precedente (`#1f77b4`/`#ff7f0e`/`#2ca02c`)
-  non supera il controllo di accessibilità daltonici (separazione protanopia
-  arancione↔verde quasi nulla, ΔE 0.7). Sostituita con una palette
-  colorblind-safe (Okabe-Ito: `#0072B2`/`#E69F00`/`#009E73`), verificata con lo
-  script di validazione della color skill.
-- **Annotazione persistente** sul punto PCA del caso più anomalo (calcolata
-  dai dati, non hard-codata: se il dataset cambia, punta sempre al vincitore
-  col peggior rank combinato).
-- **Grafico "Affidabilità per metrica ed era"**: barre raggruppate, cliccabili
-  → evidenziano l'era corrispondente su PCA e PCP.
-- **Grafico "Bonus di fiducia vs voter fatigue"**: barre divergenti (rosso =
-  crollo, blu = bonus), cliccabili → selezionano il giocatore/stagione,
-  aggiornano la sidebar con la spiegazione testuale del residuo, evidenziano
-  il punto sulla PCA.
-- **Callout narrativo**, generato dai dati (`insights.json`), non testo statico.
-
-Tutto verificato con un test reale in Chrome (Playwright): nessun errore in
-console, click testati (dimming per era, selezione singolo giocatore),
-screenshot controllati visivamente.
+> Fig. 7 — `analysis/figures/fig7_robustezza_pie_ws.png`
 
 ---
 
-## 4. Limiti noti — dichiarare, non nascondere o "aggiustare"
+## 3. Figure per report e slide
 
-Nessuno di questi richiede di modificare il dataset di partenza: sono limiti
-di scope da **dichiarare onestamente** nel report finale.
-
-1. **WS mancante per 5/9 stagioni Pre-Analytics** (fonte Basketball-Reference
-   incompleta prima del 2001). Il dato "WS 75% Pre-Analytics" è calcolato solo
-   sulle 4 stagioni valide — da citare con l'asterisco.
-2. **Consenso del voto per era non monotono** (65.6% / 81.3% / 77.6%): non
-   c'è un trend pulito, dipende più da quanto una singola stagione è stata
-   dominata da un giocatore che da un trend strutturale. Non forzare una
-   narrativa "i social hanno reso il voto più/meno consensuale" — i numeri
-   non la supportano chiaramente.
-3. **Il dataset contiene solo candidati che hanno ricevuto voti MVP**, non
-   l'intero roster di squadra. Il metodo dell'usage-gap (§2.4) funziona solo
-   quando anche il "secondo protagonista" ha ricevuto voti MVP (vero per
-   Durant nel 2016-17). **Il confronto Westbrook/Paul George (OKC, 2017-18)
-   non è replicabile con questo dataset**: George non fu candidato MVP quella
-   stagione, quindi il suo USG_PCT non è nei dati e un gap calcolato solo sui
-   candidati sarebbe fuorviante. Per verificarlo servirebbe unire i dati di
-   roster completo (grezzi disponibili in `data1/raw/nba_stats_repo/`, non
-   ancora integrati) — buon candidato come "future work" nel report, non da
-   inventare ora.
-4. **L'usage-gap e il modello di voter fatigue sono proxy indiretti**: non ci
-   sono dati reali di copertura media/social nel dataset. Va dichiarato
-   esplicitamente nel report come scelta metodologica, non presentato come
-   misura diretta di "narrativa mediatica".
+| Figura | Insight | File |
+|---|---|---|
+| MVP reale vs scelta statistica, 1996–2023 | 1 | `fig1_mvp_vs_scelta_statistica.png` |
+| Pesi del voto per era con IC 95% | 2 | `fig2_pesi_voto_per_era.png` |
+| Crollo del voto per fascia di record | 4 | `fig3_soglia_record_squadra.png` |
+| Narrativa degli MVP uscenti | 5 | `fig4_mvp_uscenti.png` |
+| Affidabilità delle singole statistiche | metodo (§1) | `fig5_affidabilita_metriche.png` |
+| PCA: frecce scelta statistica → MVP controcorrente | 3 | `fig6_pca_spostamento_guardie.png` |
+| Robustezza PIE vs WS | 2bis | `fig7_robustezza_pie_ws.png` |
 
 ---
 
-## 5. Aggiornamento: click sul singolo candidato implementato
+## 4. Scenari della demo (checklist)
 
-Aggiunta successiva a questa sessione: **click su un punto della PCA, su una
-linea del PCP, o su una barra del grafico voter-fatigue** ora seleziona quel
-candidato e attiva un confronto dettagliato — esattamente quanto promesso nel
-goal della proposal ("clicking on any candidate triggers a detailed
-comparison against historical winners, exposing overlooked players").
+Ogni scenario parte da "↺ azzera tutti i filtri". Ogni grafico porta **un
+solo messaggio**; la sidebar è il pannello di approfondimento (dettagli e
+valori). Nelle slide vanno obiettivo, dati e visualizzazioni; l'interazione si
+mostra solo nella demo.
 
-Cosa succede al click:
-- Il punto/linea viene evidenziato (bordo rosso in PCA, linea rossa spessa in PCP).
-- La sidebar mostra il rank del candidato tra **tutti** i candidati della sua
-  stagione (non solo tra i vincitori) su PIE, WS, Team_W_PCT — se il
-  candidato non ha vinto ma era #1 su PIE, viene segnalato esplicitamente
-  come possibile "snobbato" (es. **Kevin Garnett 2004-05**: rank 1°/16 su
-  PIE ma solo 11° nel voto con l'1,2% dei voti, nell'anno in cui l'MVP andò a
-  Steve Nash, 11°/16 su PIE — vedi §2.2). In tutto il dataset gli "snobbati"
-  di questo tipo sono 8, uno per ciascuna delle 8 stagioni su 27 in cui il #1
-  su PIE non ha vinto.
-- Il Box Plot passa dalla vista "per era" (tutti i candidati, statistica PTS)
-  a un confronto **PIE del candidato selezionato vs distribuzione dei
-  vincitori MVP reali della sua stessa era**, con un link per tornare alla
-  vista precedente.
+| Insight | Prova visiva | Grafico |
+|---|---|---|
+| 1 | segmenti rossi (scarto MVP reale → scelta statistica) lunghi solo tra il 1997 e il 2011 | Line Chart (vista iniziale) |
+| 2 | sotto ogni era la barra scura del peso del merito si allunga, quella grigia del record resta uguale | Box Plot |
+| 3 | le frecce rosse degli MVP controcorrente puntano tutte verso sinistra (da lunghi a guardie) | PCA |
+| 4 | dopo il brush, i tratti Attesa → Reale diventano rossi e cadono verso lo 0 | PCP |
+| caso Nash | linea tratteggiata da Nash a Duncan; nella sidebar la ★ di Nash lontana dall'anello della scelta statistica | PCA + sidebar |
 
-Nota tecnica: in D3 il rettangolo trasparente del brush (`overlay`, usato per
-il brushing ad area sulla PCA) intercetta *tutti* i click prima dei cerchi
-sottostanti. Il click-to-select sulla PCA sfrutta quindi l'evento `brush end`
-con selezione nulla: se il click coincide con un punto (entro 15px), seleziona
-quel candidato; altrimenti resetta la vista. Sul PCP, che non ha un brush
-proprio, il click è collegato direttamente alle linee.
+**S1 — Quando il voto è andato contro le statistiche (Insight 1)**
+- [ ] All'apertura, Line Chart: ★ = share attesa dell'MVP reale, tratteggio =
+      scelta statistica. I 6 segmenti rossi lunghi stanno tutti prima del
+      2011-12; dopo, ★ e tratteggio coincidono.
+- [ ] Click su Nash 2004-05 nella PCA (stella in basso a sinistra): la PCA lo
+      collega a Duncan; nella sidebar la stella di Nash è lontana a sinistra
+      dell'anello della scelta statistica.
 
-Verificato in Chrome reale (Playwright): click su punto PCA, click su linea
-PCP, click su barra fatigue, e reset via click su area vuota — tutti
-funzionanti, nessun errore in console.
+**S2 — Come votano le ere (Insight 2)**
+- [ ] Box Plot senza filtri: da Pre-Analytics a Small-Ball la barra del peso
+      del merito si allunga, quella del record no (valori nel tooltip).
+- [ ] Click su *Small-Ball* in legenda: tutte le viste si filtrano; nella
+      Line Chart le stagioni dell'era non hanno segmenti rossi lunghi.
 
-## 6. Aggiornamento: codifica a forma per i vincitori MVP
+**S2bis — Guardie contro lunghi (Insight 3)**
+- [ ] PCA senza filtri: le 6 frecce rosse vanno dalla scelta statistica
+      (cerchio) all'MVP reale (stella), e 5 su 6 attraversano la linea
+      tratteggiata da destra verso sinistra.
+- [ ] Click su *Transition* in legenda: restano accese 3 frecce (Nash
+      2005-06, Kobe 2007-08, Rose 2010-11), tutte verso sinistra.
+- [ ] Click su *Small-Ball*: tutte le frecce si spengono (nessun MVP
+      controcorrente nell'era) e le stelle accese stanno a destra o sulla
+      linea tratteggiata (Giannis ×2, Jokic ×2, Embiid); in *Transition* quasi
+      tutte stavano a sinistra.
 
-La proposal prometteva "shape distinguishes MVP winners from non-winners"; era
-implementato invece solo come bordo nero su cerchi identici — nessuna vera
-forma diversa. Corretto: i vincitori reali sono ora disegnati come **stelle**
-(`d3.symbolStar`), i non vincitori restano **cerchi** (`d3.symbolCircle`),
-generati con `d3.symbol()` invece di `<circle>`. Il bordo nero è stato
-mantenuto insieme alla forma (codifica ridondante forma+bordo, utile per
-l'accessibilità a chi ha difficoltà a distinguere piccole differenze di
-forma). Legenda aggiornata con le icone reali.
+**S3 — La soglia del 55% (Insight 4)**
+- [ ] PCP: brush su PIE ≥ 0,17 e su W% ≤ 0,55.
+- [ ] I tratti Attesa → Reale sono quasi tutti rossi e cadono a 0; nella
+      sidebar la barra "Voto ≈ 0" supera la tacca di tutti i candidati.
 
-Nota tecnica: la `size` di `d3.symbol()` è un'area, ma cerchio e stella la
-convertono in raggio "esterno" con formule diverse (cerchio: `r=√(size/π)`;
-stella: `r=√(size·ka)` con `ka≈0.891`, costante interna di d3-shape). Usare la
-stessa area per entrambe le forme fa apparire la stella ~1.67 volte più
-grande della sua "vote share" reale — errore in cui siamo incappati nella
-prima implementazione (verificato via screenshot, poi corretto invertendo
-la formula per ciascuna forma così il raggio esterno percepito coincide).
+**S4 — Chi ha preso più voti delle sue statistiche (Insight 1 e 5)**
+- [ ] Sidebar, barre blu: Iverson 00-01, Rose 10-11, Bryant 07-08, tutti MVP
+      controcorrente. Click su uno: nel PCP il suo tratto Attesa → Reale sale
+      ripido.
+- [ ] PCP: brush sull'asse *Reale* sopra 0,7 → restano quasi solo MVP, con
+      tratti blu.
 
-Nessun'altra logica (brushing, click-to-select, dimming) dipende dagli
-attributi `cx`/`cy`/`r` dei cerchi — tutte le funzioni ricalcolano le
-coordinate da `xScale(d.PC1)`/`yScale(d.PC2)`, quindi il passaggio da
-`<circle>` a `<path>` non ha richiesto altre modifiche. Rivalidato in Chrome
-reale: click su stella, filtro per era, click fatigue, brush ad area — tutti
-ancora funzionanti dopo il cambio.
+**S5 — Il superteam (Insight 6)**
+- [ ] Sidebar, barre rosse: Durant 16-17; click → atteso alto, reale ~0.
 
-## 7. Aggiornamento: quinta analisi — effetto-soglia sul record di squadra
+**Facoltativo — regressione on demand**
+- [ ] Click sull'etichetta *PIE* nel PCP, poi brush sulla timeline 2011–2023:
+      retta di tendenza di MVP e media di lega.
 
-Aggiunta allo script (`win_rate_threshold_effect()` in
-`analysis/mvp_merit_analysis.py`) la verifica quantitativa descritta in §2.6,
-con relativo modulo visivo nella dashboard: un grafico a barre "Effetto-soglia:
-quando il voto crolla quasi certamente" (3 barre, palette sequenziale
-rosso chiaro→scuro proporzionale al tasso di crollo, non scelta a mano) più
-un pannello di testo che spiega la correzione rispetto all'ipotesi originale
-(55% invece di 60-65%). Dati in `insights.json → win_rate_threshold`.
+---
 
-Con questa aggiunta, tutte e 5 le analisi elencate nelle note originali sono
-ora script riproducibili + elementi visivi nella dashboard, non più solo testo
-di chat: affidabilità per metrica (§2.1), caso Nash (§2.2), crollo di
-squadra/voter fatigue (§2.3, §2.5), usage-gap Curry/Durant (§2.4), ed
-effetto-soglia (§2.6).
+## 5. Limiti da dichiarare
 
-Rivalidato in Chrome reale: 3 barre renderizzate, callout con i numeri
-corretti, nessun errore in console.
-
-## 8. Aggiornamento: verifica Box Plot promesso, PCP ora bidirezionale, pulizia mvp_score.js
-
-Verificato di nuovo in Chrome reale (non dato per scontato, vista la lezione
-dell'hover in §8-vecchia): il Box Plot fa davvero quello che la proposal
-promette. Cliccando un candidato (es. Russell Westbrook 2011-12), il titolo
-diventa "Russell Westbrook (2011-12) vs Vincitori — Transition", il box mostra
-la distribuzione PIE dei vincitori reali dell'era (n=11), e una linea rossa
-tratteggiata segna il PIE del candidato selezionato (0.145) — il confronto
-"giocatore selezionato vs vincitori storici della sua era" richiesto, già
-implementato in §5 e qui ri-confermato ancora funzionante dopo modifiche
-esterne alla sessione.
-
-Nel frattempo, fuori da questa sessione, è stato aggiunto un brush verticale
-(`d3.brushY()`) su ciascun asse del PCP, collegato bidirezionalmente alla PCA
-(`brushedPCP()` in `js/app.js`, commit `c159423 Aggiunta vertical brush PCP
-plot`). Verificato: filtrare un asse del PCP dimmera correttamente anche i
-punti della PCA. **L'item "coordinazione bidirezionale PCA↔PCP", che era la
-priorità #1 rimasta aperta, risulta quindi risolto** (non da questa sessione,
-ma confermato funzionante).
-
-Effetto collaterale minore notato durante la verifica: ogni brush per asse
-occupa una striscia di 24px (±12px) centrata sull'asse; un click esattamente
-su quella striscia viene intercettato dal brush invece che dalla linea
-sottostante (stesso principio, in scala ridotta, del brush della PCA).
-Cliccare tra due assi funziona sempre — non bloccante, ma da tenere presente
-in demo.
-
-Rimosso anche `js/mvp_score.js` (comparso nella stessa ondata di commit,
-referenziato in `index.html` ma mai realmente usato): definiva
-`onVisualSelection()`, mai invocata da nessuna parte, che a sua volta chiamava
-una funzione inesistente (`updateBoxPlot` — la funzione reale si chiama
-`renderBoxPlot`). Era una copia della vecchia `Visual Analytics/mvp_score.js`.
-Rimosso lo script e il suo `<script>` tag da `index.html`; verificato che la
-dashboard carica ancora tutti i 9 grafici SVG senza errori in console.
-
-## 9. Aggiornamento: WS mancante trattato come dato assente, non come 0
-
-Corretto il bug segnalato nel §4 originale: `d.WS = +d.WS || 0` trasformava i
-50/354 candidati con WS mancante (tutti Pre-Analytics, 1996-97–2000-01, fonte
-Basketball-Reference incompleta) in un falso "Win Shares = 0", distorcendo
-visivamente il PCP e falsando qualunque calcolo che usasse WS per quei
-candidati. Corretto in `js/app.js` in quattro punti:
-
-1. **Parsing**: `d.WS = d.WS === "" ? null : +d.WS` — `null`, non `0`.
-2. **Asse PCP**: il dominio (`d3.extent`) ignora automaticamente i `null`,
-   quindi il minimo dell'asse WS ora è il valore reale più basso (2) invece
-   di essere trascinato a 0 dai falsi zeri.
-3. **Polilinee PCP**: il generatore di linea ora usa `.defined()` per creare
-   un'interruzione onesta nei 50 candidati senza WS, invece di attraversare
-   un punto inventato. Verificato: esattamente 50 polilinee mostrano
-   un'interruzione (contate via numero di comandi `M` nel path).
-4. **MVP Score dinamico e rank al click**: un candidato con WS mancante non
-   viene più penalizzato come se avesse WS=0 — il termine viene escluso e i
-   pesi ridistribuiti sulle metriche disponibili (`computeDynamicMVPScore`);
-   il rank su WS mostra onestamente "N/D" invece di un numero falsato
-   (`computeSeasonRanks`). Verificato: cliccando Gary Payton (1996-97) la
-   sidebar mostra "WS non disponibile per questa stagione" invece di un rank.
-
-Verificate tutte le 21 colonne numeriche del CSV: solo `WS` e `WS48` (stesse
-50 righe) hanno valori mancanti; `WS48` non è comunque usato da nessuna parte
-nel codice. La correzione non serve altrove.
-
-## 10. Aggiornamento: Line Chart — statistica selezionabile, marcatore, regressione on demand
-
-Chiuso l'ultimo gap tra proposal e implementazione: la terza analytics
-promessa ("Linear regression is computed on demand to quantify statistical
-trends across seasons and eras") esisteva solo come script offline
-(`Visual Analytics/compute_mvp_model.py`), mai richiamata dalla dashboard.
-Riprogettata la Line Chart con tre interazioni visive (nessun menu/radio
-button, coerente col vincolo d'esame):
-
-1. **Click su un'etichetta d'asse del PCP** ("PTS", "PIE", "WS"...) cambia la
-   statistica mostrata dalla Line Chart — sostituisce il selettore a tendina
-   che la proposal implicava, riusando un elemento visivo già esistente
-   invece di introdurre un widget.
-2. **Selezione di un candidato altrove** (PCA, PCP, grafico fatigue) marca la
-   sua stagione sulla Line Chart con un punto e una linea tratteggiata,
-   confrontandolo visivamente con la media di lega — il "confronto vs media
-   di lega" richiesto dalla proposal, riusando la selezione già esistente
-   invece di una quarta interazione nuova.
-3. **Brush orizzontale sulla timeline** calcola on demand una regressione
-   lineare (minimi quadrati, implementata a mano) solo sul periodo
-   trascinato, disegnando la retta di tendenza con pendenza e R² — finalmente
-   collega la regressione allo strumento interattivo.
-
-Esempio verificato in Chrome reale: selezionata la statistica PIE, selezionato
-Steve Nash (2005-06) dal grafico fatigue (marcatore a 0.17), poi trascinato un
-brush su 2012-13/2022-23 → "Trend in crescita: +0.002/stagione (R²=0.62)",
-coerente con l'§2.1 (PIE più affidabile nell'era Small-Ball).
-
-Corretta anche una piccola incoerenza collegata: il brush verticale del PCP
-(aggiunto fuori da questa sessione, §8) non azzerava lo stato "candidato
-selezionato" come già faceva il brush della PCA — aggiunta la stessa chiamata
-(`resetCandidateFocus()`) per coerenza, altrimenti il marcatore sulla Line
-Chart sarebbe rimasto incoerente dopo un brush sugli assi del PCP.
-
-## 11. Aggiornamento: revisione pre-esame (punti aperti chiusi)
-
-Correzioni emerse dalla revisione complessiva del progetto, in ordine di
-priorità.
-
-**Metodologia**
-1. **Varianza spiegata visibile**: le etichette degli assi della PCA ora
-   riportano la varianza di ciascuna componente (PC1 25,5%, PC2 20,0%,
-   cumulata 45,5%), letta da `data/pca_meta.json` e non scritta a mano.
-2. **`Team_W_PCT` rimosso dagli input della PCA**
-   (`Visual Analytics/compute_pca.py`): è contesto di squadra, non merito
-   individuale, e la domanda del progetto è proprio separare le due cose. Il
-   record di squadra resta come asse del PCP. Effetto sulla proiezione
-   minimo (correlazione 0,999 con le coordinate precedenti), varianza
-   cumulata +1,7 punti. Il segno delle componenti è ora fissato (PC1 positivo
-   = REB, PC2 positivo = PTS), così le etichette "guardie ↔ lunghi" e "volume
-   offensivo" restano valide se si rigenera la PCA.
-3. **Pesi dell'MVP Score stimati dai dati**, non più scelti a mano
-   (prima 0.35/0.30/0.20/0.10/0.05). `mvp_score_weights()` in
-   `analysis/mvp_merit_analysis.py`: Ridge su z-score, target MVP_Share,
-   coefficienti vincolati ≥ 0, normalizzati a somma 1 (R² = 0,523, n = 304
-   candidati con WS disponibile). Risultato: **PIE 37% · Team_W_PCT 26% ·
-   WS 25% · PTS 12% · TS_PCT 0%**. Senza vincolo TS_PCT prende un peso
-   negativo solo per collinearità con PIE ("tirare meglio abbassa il
-   punteggio"), da cui il vincolo. I pesi sono mostrati nella sidebar.
-4. **Titolo della Line Chart corretto**: mostrava "vs League Average", ma la
-   media è calcolata sui soli candidati MVP (il dataset non contiene l'intera
-   lega).
-5. **Esempio di "snobbato" corretto** in §5 (Westbrook 2011-12 non era #1 su
-   PIE e quindi non veniva segnalato dal codice; sostituito con Garnett
-   2004-05).
-
-**Interazione**
-6. **Sidebar all'avvio**: mostrava le prime 5 righe del CSV (candidati
-   1996-97). Ora mostra la Top 5 dello score calcolato su tutti i candidati,
-   con titolo che indica se lo score è su tutto il dataset o sulla selezione.
-7. **Filtri combinati**: brush sulla PCA, brush sugli assi del PCP e filtro
-   per era (click sul grafico di affidabilità) ora scrivono in un unico stato
-   (`filters` in `js/app.js`) e la selezione è la loro **intersezione**,
-   applicata da `applyFilters()` a tutte le viste (dimming, Line Chart, Box
-   Plot, MVP Score). Prima ogni filtro sovrascriveva gli altri e il filtro
-   per era dimmerava soltanto, senza aggiornare grafici e score. Aggiunto un
-   link "↺ azzera tutti i filtri" nella sidebar.
-8. **Tooltip sulla PCA (era il punto aperto "hover-pop")**: la causa era la
-   stessa già documentata per il click in §5 — l'overlay del brush sta sopra
-   i punti e intercetta tutti gli eventi del puntatore, quindi un
-   `mouseenter` sui singoli punti non scatta mai (i test headless passavano
-   perché sintetizzavano l'evento direttamente sul nodo). Ora il tooltip è
-   gestito da un `mousemove` sull'overlay, con ricerca del punto più vicino;
-   il punto sotto il cursore viene evidenziato. Tooltip aggiunto anche alle
-   linee del PCP.
-9. **Box Plot collegato alla statistica attiva**: cliccando un'etichetta del
-   PCP cambiano sia la Line Chart sia il Box Plot (per era, oppure
-   candidato vs vincitori della sua era). Valori mancanti (WS) gestiti e
-   numerosità `n` mostrata per ogni era.
-10. **Resize**: i grafici vengono ridisegnati al cambio di larghezza della
-    finestra (si conservano filtro per era e candidato selezionato; i brush
-    vengono azzerati).
-
-**Repository**
-11. Rimossi gli script e gli output obsoleti/incoerenti (vedi README per la
-    pipeline aggiornata).
-
-Verificato in Chromium headless (Playwright) con mouse reale: brush PCA →
-brush PCP → filtro era (intersezione 73 → 40 → 9 candidati), cambio
-statistica, reset, hover e click su Steve Nash, resize; nessun errore in
-console.
+1. **La narrativa è un proxy.** È la parte di voto non spiegata da PIE e
+   record di squadra, non una misura della copertura mediatica. Include anche
+   tutto ciò che il modello non vede: difesa, infortuni, storia personale.
+2. **Modello lineare su una variabile limitata [0, 1].** I vincitori hanno
+   sempre una narrativa positiva (il modello non prevede mai share vicine a
+   1). Per questo l'Insight 1 confronta le **share attese** (vincitore vs
+   scelta statistica), non l'ampiezza dei residui dei vincitori.
+3. **Un solo indicatore di merito individuale (PIE).** Scelto perché è il più
+   affidabile tra quelli disponibili (Fig. 5); WS manca per 50 candidati
+   Pre-Analytics.
+4. **Solo candidati con almeno un voto.** Il dataset non contiene i
+   giocatori senza voti, quindi l'Insight 6 è verificabile solo quando
+   entrambe le stelle sono candidate (vero per Curry e Durant nel 2016-17; non
+   per Westbrook e George nel 2017-18).
+5. **Campioni piccoli.** Con selezioni sotto i 25 candidati la dashboard
+   segnala che la stima è indicativa. Le differenze tra ere dell'Insight 2
+   sono accompagnate da intervalli bootstrap; la crescita della share attesa
+   media dei vincitori dopo il 2011 (0,46 → 0,59) **non** è significativa da
+   sola (Mann-Whitney p = 0,18), quindi l'Insight 1 si basa sulla presenza o
+   assenza di MVP controcorrente, non su quella media.
