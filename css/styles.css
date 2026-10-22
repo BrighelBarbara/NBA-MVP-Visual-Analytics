@@ -621,3 +621,66 @@ g.narrative-row:hover .row-hit { fill: #ecf0f1; }
     stroke-dasharray: 2,3;
 }
 .shift-layer .dimmed { opacity: 0.08; }
+
+/* --- Vista espansa (modale) --- */
+.card {
+    position: relative;
+}
+
+.expand-btn {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    width: 26px;
+    height: 26px;
+    border: 1px solid #d5dbdb;
+    border-radius: 5px;
+    background: #fff;
+    color: #1a252f;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.expand-btn:hover {
+    background: #ecf0f1;
+    border-color: #95a5a6;
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(26, 37, 47, 0.6);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 800;
+}
+
+body.modal-open .modal-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.card.expanded {
+    position: fixed;
+    inset: 4vh 4vw;
+    z-index: 900;
+    padding: 16px 20px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.card.expanded h2 {
+    font-size: 1.2rem;
+    padding-right: 36px;
+}
+
+.card.expanded .expand-btn {
+    top: 14px;
+    right: 16px;
+}
+
+#pca-card h2, #pcp-card h2, #line-card h2, #boxplot-card h2 {
+    padding-right: 32px;
+}

@@ -88,6 +88,7 @@ Promise.all([
     prepareVoteModel(insights.vote_model);
 
     renderLegend();
+    setupExpandableCards();
     renderAllCharts();
     renderScoreWeightsNote(insights.mvp_score_weights);
     d3.select("#reset-all-filters").on("click", (event) => {
@@ -196,6 +197,64 @@ function renderAllCharts() {
         const record = globalData.find(d => keyOf(d) === selectedCandidateKey);
         if (record) selectCandidate(record);
     }
+}
+
+// --- VISTA ESPANSA (MODALE) ---
+// Ogni grafico ha in alto a destra un pulsante che lo porta quasi a schermo
+// intero sopra uno sfondo scuro semitrasparente. Si chiude con il pulsante,
+// con un click sullo sfondo o con Esc. Il grafico viene ridisegnato alla
+// nuova dimensione; i filtri delle altre viste restano attivi, il brush della
+// vista ridisegnata (PCA o PCP) viene azzerato perche' non sopravvive al
+// ridisegno.
+const EXPANDABLE_CARDS = ["pca-card", "pcp-card", "line-card", "boxplot-card"];
+let expandedCard = null;
+
+function setupExpandableCards() {
+    d3.select("body").append("div").attr("class", "modal-backdrop")
+        .on("click", () => toggleExpand(null));
+    EXPANDABLE_CARDS.forEach(id => {
+        d3.select(`#${id}`).append("button")
+            .attr("class", "expand-btn")
+            .attr("type", "button")
+            .attr("title", "Espandi il grafico")
+            .attr("aria-label", "Espandi il grafico")
+            .text("⤢")
+            .on("click", () => toggleExpand(expandedCard === id ? null : id));
+    });
+    d3.select(window).on("keydown.expand", (event) => {
+        if (event.key === "Escape" && expandedCard) toggleExpand(null);
+    });
+}
+
+function toggleExpand(id) {
+    const previous = expandedCard;
+    if (previous) {
+        d3.select(`#${previous}`).classed("expanded", false)
+            .select(".expand-btn").text("⤢").attr("title", "Espandi il grafico").attr("aria-label", "Espandi il grafico");
+    }
+    expandedCard = id;
+    d3.select("body").classed("modal-open", !!id);
+    if (id) {
+        d3.select(`#${id}`).classed("expanded", true)
+            .select(".expand-btn").text("✕").attr("title", "Chiudi (Esc)").attr("aria-label", "Chiudi");
+    }
+    [previous, id].filter(Boolean).forEach(rerenderCard);
+}
+
+// Ridisegna solo la vista che ha cambiato dimensione, poi riapplica filtri e
+// candidato selezionato a tutte le viste collegate.
+function rerenderCard(id) {
+    hideTooltip();
+    if (id === "pca-card") {
+        filters.pca = null;
+        renderPCAScatterplot(globalData);
+    } else if (id === "pcp-card") {
+        filters.pcp = null;
+        renderParallelCoordinates(globalData);
+    }
+    applyFilters();
+    const record = selectedCandidateKey && globalData.find(d => keyOf(d) === selectedCandidateKey);
+    if (record) selectCandidate(record);
 }
 
 // Applica l'intersezione dei filtri a tutte le viste collegate e lancia le

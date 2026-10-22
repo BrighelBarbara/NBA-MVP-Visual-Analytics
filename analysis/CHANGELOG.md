@@ -350,3 +350,12 @@ Descrizioni delle card ridotte a una riga.
   controcorrente (seguono il dimming dei filtri) e linea PC1 = 0.
 - Report: nuovo Insight 3 (guardie vs lunghi), Insight 1 riformulato alla
   luce del controllo con WS, sezione 2bis sulla robustezza.
+
+## 16. Vista espansa dei grafici
+
+Pulsante ⤢ in alto a destra di PCA, PCP, Line Chart e Box Plot: la card si
+apre quasi a schermo intero (modale con sfondo scuro semitrasparente) e il
+grafico viene ridisegnato alla nuova dimensione (`setupExpandableCards`,
+`toggleExpand`, `rerenderCard` in `js/app.js`). Chiusura con ✕, click sullo
+sfondo o Esc. Filtri delle altre viste e candidato selezionato restano
+attivi; il brush della vista ridisegnata (PCA o PCP) viene azzerato.
