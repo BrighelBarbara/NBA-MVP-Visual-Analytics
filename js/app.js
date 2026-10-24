@@ -1013,6 +1013,9 @@ function renderBoxPlot(data) {
             .on("mouseleave", hideTooltip);
 
         g.append("line").attr("x1", x + boxWidth / 2).attr("x2", x + boxWidth / 2).attr("y1", yScale(min)).attr("y2", yScale(max)).attr("stroke", "#000");
+        [min, max].forEach(v => g.append("line")
+            .attr("x1", x + boxWidth / 4).attr("x2", x + boxWidth * 3 / 4)
+            .attr("y1", yScale(v)).attr("y2", yScale(v)).attr("stroke", "#000"));
         g.append("rect").attr("x", x).attr("y", yScale(q3)).attr("height", Math.max(1, yScale(q1) - yScale(q3))).attr("width", boxWidth).attr("fill", ERA_COLORS[era]).attr("opacity", 0.7).attr("stroke", "#000");
         g.append("line").attr("x1", x).attr("x2", x + boxWidth).attr("y1", yScale(median)).attr("y2", yScale(median)).attr("stroke", "#000").attr("stroke-width", 2);
     });
@@ -1353,6 +1356,9 @@ function renderPlayerVsWinnersBoxPlot(player) {
 
         svg.append("line").attr("x1", bx + bw / 2).attr("x2", bx + bw / 2)
             .attr("y1", yScale(lo)).attr("y2", yScale(hi)).attr("stroke", "#000");
+        [lo, hi].forEach(v => svg.append("line")
+            .attr("x1", bx + bw / 4).attr("x2", bx + bw * 3 / 4)
+            .attr("y1", yScale(v)).attr("y2", yScale(v)).attr("stroke", "#000"));
         svg.append("rect").attr("x", bx).attr("y", yScale(q3))
             .attr("height", Math.max(1, yScale(q1) - yScale(q3))).attr("width", bw)
             .attr("fill", ERA_COLORS[era] || "#ccc").attr("opacity", 0.6).attr("stroke", "#000");
