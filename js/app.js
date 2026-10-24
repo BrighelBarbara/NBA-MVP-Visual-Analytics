@@ -5,15 +5,25 @@ const ERA_COLORS = {
 };
 const ERAS = Object.keys(ERA_COLORS);
 
-const RESIDUAL_COLORS = { positive: "#2166AC", negative: "#B2182B" };
-const ACCENT = "#b2182b";
+const RESIDUAL_COLORS = { positive: "#762A83", negative: "#B2182B" };
+const SELECT_COLOR = "#000";
+const MERIT_COLOR = "#4d4d4d";
+const TEAM_COLOR = "#bdbdbd";
+const OTHER_BAR_COLOR = "#8c8c8c";
 
 const METRIC_LABELS = {
     PTS: "PTS", REB: "REB", AST: "AST", TS_PCT: "TS%", WS: "WS", PIE: "PIE",
     Team_W_PCT: "Team W%", Expected_Share: "Share attesa", MVP_Share: "Share voto", Narrative: "Narrativa",
 };
 const label = m => METRIC_LABELS[m] || m;
-const PCP_SHORT_LABELS = { Team_W_PCT: "W%", Expected_Share: "Attesa", MVP_Share: "Reale" };
+const AXIS_TITLES = {
+    PTS: "Punti a partita (PTS)", REB: "Rimbalzi a partita (REB)", AST: "Assist a partita (AST)",
+    TS_PCT: "True Shooting % (TS%)", WS: "Win Shares (WS)", PIE: "Player Impact Estimate (PIE)",
+    Team_W_PCT: "% vittorie della squadra", Expected_Share: "Share voto MVP attesa (modello)",
+    MVP_Share: "Share voto MVP reale", Narrative: "Narrativa (share reale − attesa)",
+};
+const axisTitle = m => AXIS_TITLES[m] || label(m);
+const PCP_SHORT_LABELS = { Team_W_PCT: "W% squadra", Expected_Share: "Share attesa", MVP_Share: "Share reale" };
 const PCT_METRICS = ["MVP_Share", "Expected_Share", "Team_W_PCT", "TS_PCT"];
 
 let globalData = [];
@@ -69,7 +79,7 @@ Promise.all([
 
     renderLegend();
     setupExpandableCards();
-    setupBrushClearOnOutsideClick();
+    setupDeselectOnEmptyClick();
     renderAllCharts();
     renderScoreWeightsNote(insights.mvp_score_weights);
     d3.select("#reset-all-filters").on("click", (event) => {
@@ -178,12 +188,14 @@ function setupExpandableCards() {
             .on("click", () => toggleExpand(expandedCard === id ? null : id));
     });
     d3.select(window).on("keydown.expand", (event) => {
-        if (event.key === "Escape" && expandedCard) toggleExpand(null);
+        if (event.key !== "Escape") return;
+        if (expandedCard) toggleExpand(null);
+        else resetAllFilters();
     });
 }
 
-const BRUSH_CARDS = ["pca-card", "pcp-card", "line-card"];
-const NO_CLEAR_TARGETS = ".brush, .polyline, .vote-seg, .mismatch-marker, .axis-label, .legend, .expand-btn";
+const DESELECT_CARDS = ["pca-card", "pcp-card", "line-card", "boxplot-card"];
+const NO_CLEAR_TARGETS = ".brush, .polyline, .vote-seg, .axis-label, .legend, .era-box, a, button";
 
 function clearBrushes(root) {
     root.selectAll(".brush").each(function() {
@@ -193,8 +205,8 @@ function clearBrushes(root) {
     });
 }
 
-function setupBrushClearOnOutsideClick() {
-    BRUSH_CARDS.forEach(id => {
+function setupDeselectOnEmptyClick() {
+    DESELECT_CARDS.forEach(id => {
         const card = document.getElementById(id);
         let downTarget = null;
         card.addEventListener("mousedown", (event) => { downTarget = event.target; }, true);
@@ -203,6 +215,10 @@ function setupBrushClearOnOutsideClick() {
             downTarget = null;
             if (!start || start.closest(NO_CLEAR_TARGETS) || event.target.closest(NO_CLEAR_TARGETS)) return;
             clearBrushes(d3.select(card));
+            const clearEra = id === "boxplot-card" && filters.era;
+            if (clearEra) filters.era = null;
+            if (selectedCandidateKey) clearCandidateSelection();
+            else if (clearEra) applyFilters();
         });
     });
 }
@@ -266,7 +282,6 @@ function applyFilters() {
     d3.selectAll(".legend-item[data-era]").classed("active", function() {
         return filters.era === this.getAttribute("data-era");
     });
-    d3.select("#reset-all-filters").style("display", active ? null : "none");
 
     currentSelectionData = selected;
     renderLineChart(selected);
@@ -274,6 +289,14 @@ function applyFilters() {
     renderModelPanel(selected, active);
     renderNarrativePanel(selected);
     computeDynamicMVPScore(selected, active);
+    updateResetLink();
+}
+
+function updateResetLink() {
+    const lineBrush = d3.select("#line-chart .brush").node();
+    const active = !!(filters.pca || filters.pcp || filters.era || selectedCandidateKey ||
+        (lineBrush && d3.brushSelection(lineBrush)));
+    d3.select("#reset-all-filters").style("display", active ? null : "none");
 }
 
 function resetAllFilters() {
@@ -295,38 +318,67 @@ function toggleEra(era) {
     applyFilters();
 }
 
-function renderLegend() {
-    const legend = d3.select("#pca-legend");
+const LEGEND_R = 4.5;
+
+function renderCardLegend(target, items) {
+    const legend = d3.select(target);
     legend.selectAll("*").remove();
-
-    Object.entries(ERA_COLORS).forEach(([era, color]) => {
-        const item = legend.append("div")
-            .attr("class", "legend-item clickable")
-            .attr("data-era", era)
-            .attr("title", `Filtra l'era ${era} su tutte le viste`)
-            .on("click", () => toggleEra(era));
-        item.append("span").attr("class", "legend-swatch").style("background", color);
-        item.append("span").text(era);
+    items.forEach(item => {
+        if (item.type === "eras") {
+            legend.append("span").attr("class", "legend-heading").text("Era:");
+            ERAS.forEach(era => {
+                const el = legend.append("div")
+                    .attr("class", "legend-item clickable")
+                    .classed("active", filters.era === era)
+                    .attr("data-era", era)
+                    .attr("title", `Filtra l'era ${era} su tutte le viste`)
+                    .on("click", () => toggleEra(era));
+                el.append("span").attr("class", "legend-swatch").style("background", ERA_COLORS[era]);
+                el.append("span").text(era);
+            });
+            return;
+        }
+        const el = legend.append("div").attr("class", "legend-item");
+        const wide = item.type === "line";
+        const icon = el.append("svg").attr("width", wide ? 20 : 14).attr("height", 14);
+        if (item.type === "star" || item.type === "circle") {
+            const type = item.type === "star" ? d3.symbolStar : d3.symbolCircle;
+            const size = item.type === "star" ? (LEGEND_R * LEGEND_R) / 0.89081309152928522810 : Math.PI * LEGEND_R * LEGEND_R * 0.8;
+            icon.append("path")
+                .attr("transform", "translate(7,7)")
+                .attr("d", d3.symbol().type(type).size(size)())
+                .attr("fill", item.fill || "#7f8c8d")
+                .attr("stroke", item.stroke || "none")
+                .attr("stroke-width", item.stroke ? 1 : 0);
+        } else if (item.type === "rect") {
+            icon.append("rect").attr("x", 2).attr("y", 2).attr("width", 10).attr("height", 10).attr("rx", 1.5)
+                .attr("fill", item.fill).attr("fill-opacity", item.opacity ?? 1).attr("stroke", item.stroke || "none");
+        } else if (wide) {
+            const line = icon.append("line").attr("x1", 1).attr("x2", 19).attr("y1", 7).attr("y2", 7);
+            if (item.cls) line.attr("class", item.cls);
+            else line.attr("stroke", item.color).attr("stroke-width", item.width || 2)
+                .attr("stroke-dasharray", item.dash || null);
+            if (item.star) icon.append("path").attr("transform", "translate(10,7)")
+                .attr("d", d3.symbol().type(d3.symbolStar).size(30)())
+                .attr("fill", "#7f8c8d").attr("stroke", "#000").attr("stroke-width", 0.6);
+        }
+        el.append("span").text(item.text);
     });
+}
 
-    const LEGEND_R = 4.5;
-    const winnerItem = legend.append("div").attr("class", "legend-item");
-    const starSvg = winnerItem.append("svg").attr("width", 14).attr("height", 14);
-    starSvg.append("path")
-        .attr("transform", "translate(7,7)")
-        .attr("d", d3.symbol().type(d3.symbolStar).size((LEGEND_R * LEGEND_R) / 0.89081309152928522810)())
-        .attr("fill", "#7f8c8d")
-        .attr("stroke", "#000")
-        .attr("stroke-width", 1.2);
-    winnerItem.append("span").text("MVP reale");
-
-    const nonWinnerItem = legend.append("div").attr("class", "legend-item");
-    const circleSvg = nonWinnerItem.append("svg").attr("width", 14).attr("height", 14);
-    circleSvg.append("path")
-        .attr("transform", "translate(7,7)")
-        .attr("d", d3.symbol().type(d3.symbolCircle).size(Math.PI * LEGEND_R * LEGEND_R)())
-        .attr("fill", "#7f8c8d");
-    nonWinnerItem.append("span").text("Candidato (area = share voto)");
+function renderLegend() {
+    renderCardLegend("#pca-legend", [
+        { type: "eras" },
+        { type: "star", text: "MVP reale", stroke: "#000" },
+        { type: "circle", text: "Candidato (area = share voto)" },
+    ]);
+    renderCardLegend("#pcp-legend", [
+        { type: "eras" },
+        { type: "line", color: "#7f8c8d", width: 2.5, text: "MVP reale (spessa)" },
+        { type: "line", color: RESIDUAL_COLORS.positive, width: 2.5, text: "Voto reale > atteso" },
+        { type: "line", color: RESIDUAL_COLORS.negative, width: 2.5, text: "Voto reale < atteso" },
+        { type: "line", color: "#7f8c8d", width: 4, text: "Selezionato (le altre sbiadiscono)" },
+    ]);
 }
 
 let sharedTooltip = null;
@@ -476,9 +528,10 @@ function renderPCAScatterplot(data) {
             const clicked = event.sourceEvent && event.sourceEvent.clientX !== undefined
                 ? findNearestPoint(data, xScale, yScale, ...d3.pointer(event.sourceEvent, this), 15)
                 : null;
+            const previousKey = selectedCandidateKey;
             resetCandidateFocus();
             applyFilters();
-            if (clicked) selectCandidate(clicked);
+            if (clicked && keyOf(clicked) !== previousKey) selectCandidate(clicked);
             return;
         }
 
@@ -496,7 +549,7 @@ function renderPCAScatterplot(data) {
 
 function candidateTooltipHtml(d) {
     const fmt = v => (v === null || v === undefined) ? "N/D" : v;
-    const narrativeColor = d.Narrative >= 0 ? "#9ecae1" : "#fc9272";
+    const narrativeColor = d.Narrative >= 0 ? "#c2a5cf" : "#fc9272";
     return `<strong>${d.Player}</strong> (${d.Season}, ${d.Team})${d.Is_MVP_Winner === 1 ? " ★ MVP" : ""}${d.Prev_MVP ? " · MVP uscente" : ""}<br>` +
         `${d.Tactical_Era} · PTS ${d.PTS} · PIE ${d.PIE} · WS ${fmt(d.WS)} · Team W% ${fmtPct(d.Team_W_PCT)}<br>` +
         `Voto: reale <b>${fmtPct(d.MVP_Share)}</b> · atteso ${fmtPct(Math.max(0, d.Expected_Share))} · ` +
@@ -594,7 +647,7 @@ function renderParallelCoordinates(data) {
         .attr("class", d => `polyline ${d.Is_MVP_Winner === 1 ? "winner" : ""}`)
         .attr("d", path)
         .attr("stroke", d => ERA_COLORS[d.Tactical_Era] || "#34495e")
-        .on("click", (_event, d) => selectCandidate(d))
+        .on("click", (_event, d) => toggleCandidate(d))
         .on("mouseenter mousemove", (event, d) => showTooltip(candidateTooltipHtml(d), event))
         .on("mouseleave", hideTooltip);
 
@@ -616,7 +669,8 @@ function renderParallelCoordinates(data) {
         .attr("transform", d => `translate(${xScale(d)})`);
 
     axesG.each(function(d) {
-        const fmt = ["TS_PCT", "PIE", "Team_W_PCT", "Expected_Share", "MVP_Share", "Narrative"].includes(d) ? d3.format(".2~f") : d3.format("~s");
+        const fmt = PCT_METRICS.includes(d) ? d3.format(".0%")
+            : ["PIE", "Narrative"].includes(d) ? d3.format(".2~f") : d3.format("~s");
         d3.select(this).call(d3.axisLeft(yScales[d]).ticks(5).tickFormat(fmt));
     })
         .append("text")
@@ -628,7 +682,8 @@ function renderParallelCoordinates(data) {
         .text(d => PCP_SHORT_LABELS[d] || label(d))
         .attr("fill", "#000")
         .attr("text-decoration", "underline")
-        .on("click", (_event, dim) => setMetric(dim));
+        .on("click", (_event, dim) => setMetric(dim))
+        .append("title").text(d => `${axisTitle(d)} · click per mostrarla in Line Chart e Box Plot`);
 
     axesG.append("g")
         .attr("class", "brush")
@@ -698,6 +753,16 @@ function setMetric(metric) {
     else renderBoxPlot(currentSelectionData);
 }
 
+function addYAxisTitle(svg, height, marginLeft, text) {
+    svg.append("text")
+        .attr("class", "axis-title")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -height / 2)
+        .attr("y", -marginLeft + 11)
+        .attr("text-anchor", "middle")
+        .text(text);
+}
+
 function formatMetric(metric, v) {
     if (v === null || v === undefined || Number.isNaN(v)) return "N/D";
     if (metric === "Narrative") return fmtSigned(v);
@@ -712,13 +777,23 @@ function renderLineChart(data) {
     const refLabel = choiceMode ? "scelta statistica" : hasLeague ? "media di lega" : "media dei candidati";
     d3.select("#linechart-title").text(`${label(metric)}: MVP reale vs ${refLabel}`);
 
+    const filtered = data.length !== globalData.length;
+    const candidate = selectedCandidateKey && globalData.find(d => keyOf(d) === selectedCandidateKey);
+    const legendItems = [
+        { type: "eras" },
+        { type: "line", cls: "series-winner", star: true, text: "MVP reale" },
+        { type: "line", cls: "series-reference", text: refLabel.charAt(0).toUpperCase() + refLabel.slice(1) },
+    ];
+    if (filtered) legendItems.push({ type: "line", cls: "series-selection", text: "Media selezione" });
+    if (candidate) legendItems.push({ type: "circle", fill: SELECT_COLOR, text: "Selezionato" });
+    renderCardLegend("#line-legend", legendItems);
+
     const container = d3.select("#line-chart");
     container.selectAll("*").remove();
 
-    const margin = { top: 20, right: 12, bottom: 34, left: 42 };
+    const margin = { top: 14, right: 12, bottom: 34, left: 54 };
     const { width, height } = chartSize(container, margin);
-    const STRIP = 16;
-    const plotH = height - STRIP;
+    const plotH = height;
     const svg = appendSvg(container, width, height, margin);
 
     const winners = seasonsSorted.map(season => {
@@ -733,12 +808,10 @@ function renderLineChart(data) {
                 ? leagueAverages[season][metric]
                 : d3.mean(globalData.filter(d => d.Season === season), d => d[metric]),
     }));
-    const filtered = data.length !== globalData.length;
     const selection = filtered ? seasonsSorted.map(season => ({
         season,
         value: d3.mean(data.filter(d => d.Season === season), d => d[metric]),
     })) : [];
-    const candidate = selectedCandidateKey && globalData.find(d => keyOf(d) === selectedCandidateKey);
 
     const valid = v => v !== null && v !== undefined && !Number.isNaN(v);
     const allValues = [...winners, ...reference, ...selection].map(p => p.value).filter(valid);
@@ -758,6 +831,13 @@ function renderLineChart(data) {
         .attr("transform", "rotate(-25)")
         .style("text-anchor", "end");
     svg.append("g").call(d3.axisLeft(yScale).ticks(5).tickFormat(v => formatMetric(metric, v)));
+    addYAxisTitle(svg, plotH, margin.left, axisTitle(metric));
+    svg.append("text")
+        .attr("class", "axis-title")
+        .attr("x", width)
+        .attr("y", height + 30)
+        .attr("text-anchor", "end")
+        .text("Stagione");
     if (metric === "Narrative") {
         svg.append("line").attr("class", "zero-line")
             .attr("x1", 0).attr("x2", width).attr("y1", yScale(0)).attr("y2", yScale(0));
@@ -767,17 +847,6 @@ function renderLineChart(data) {
         .defined(p => valid(p.value))
         .x(p => xScale(p.season))
         .y(p => yScale(p.value))(series);
-
-    if (choiceMode) {
-        const infos = seasonsSorted.map(s => seasonInfo[s]);
-        infos.filter(s => !s.matches).forEach(s => {
-            const x = xScale(s.season);
-            const big = s.merit_gap >= 0.15;
-            svg.append("line").attr("class", big ? "gap-line" : "gap-line minor")
-                .attr("x1", x).attr("x2", x)
-                .attr("y1", yScale(s.choice_expected)).attr("y2", yScale(s.winner_expected));
-        });
-    }
 
     svg.append("path").attr("class", "series-reference").attr("d", lineOf(reference));
     if (filtered) {
@@ -805,36 +874,28 @@ function renderLineChart(data) {
         const cx = xScale(candidate.Season), cy = yScale(candidate[metric]);
         svg.append("line")
             .attr("x1", cx).attr("x2", cx).attr("y1", 0).attr("y2", plotH)
-            .attr("stroke", ACCENT).attr("stroke-width", 1).attr("stroke-dasharray", "3,3");
-        svg.append("circle").attr("cx", cx).attr("cy", cy).attr("r", 4.5).attr("fill", ACCENT);
+            .attr("stroke", SELECT_COLOR).attr("stroke-width", 1).attr("stroke-dasharray", "3,3");
+        svg.append("circle").attr("cx", cx).attr("cy", cy).attr("r", 4.5).attr("fill", SELECT_COLOR);
         svg.append("text")
             .attr("x", cx + (cx > width * 0.75 ? -7 : 7)).attr("y", cy - 7)
             .attr("text-anchor", cx > width * 0.75 ? "end" : "start")
-            .attr("font-size", "0.68rem").attr("fill", ACCENT)
+            .attr("font-size", "0.68rem").attr("fill", SELECT_COLOR)
             .text(`${candidate.Player} (${formatMetric(metric, candidate[metric])})`);
     }
 
-    const legendItems = [
-        { cls: "series-winner", text: "MVP reale" },
-        { cls: "series-reference", text: refLabel.charAt(0).toUpperCase() + refLabel.slice(1) },
-    ];
-    if (filtered) legendItems.push({ cls: "series-selection", text: "Media selezione" });
-    if (choiceMode) legendItems.push({ cls: "gap-line", text: "MVP controcorrente (scarto)" });
-    const lg = svg.append("g").attr("transform", "translate(0,-12)");
-    let lx = 0;
-    legendItems.forEach(item => {
-        const g = lg.append("g").attr("transform", `translate(${lx},0)`);
-        if (item.swatch) g.append("rect").attr("class", item.cls).attr("x", 0).attr("y", -5).attr("width", 16).attr("height", 10);
-        else g.append("line").attr("class", item.cls).attr("x1", 0).attr("x2", 16).attr("y1", 0).attr("y2", 0);
-        const t = g.append("text").attr("x", 20).attr("y", 3).attr("class", "inline-legend").text(item.text);
-        lx += 26 + t.node().getComputedTextLength();
-    });
 
+    let hadTrend = false;
     const brush = d3.brushX()
         .extent([[0, 0], [width, plotH]])
         .on("end", (event) => {
             svg.selectAll(".trend-line, .trend-label").remove();
-            if (!event.selection) return;
+            updateResetLink();
+            const wasTrend = hadTrend;
+            hadTrend = !!event.selection;
+            if (!event.selection) {
+                if (event.sourceEvent && !wasTrend && selectedCandidateKey) clearCandidateSelection();
+                return;
+            }
 
             const [x0, x1] = event.selection;
             const inRange = s => seasonsSorted.map((season, idx) => ({ season, idx, value: s[idx].value }))
@@ -863,26 +924,6 @@ function renderLineChart(data) {
     const lineBrushG = svg.append("g").attr("class", "brush").call(brush);
     lineBrushG.node().__brushBehavior = brush;
     clearBrushOnClick(lineBrushG, brush);
-
-    const gapOpacity = d3.scaleLinear().domain([0, 0.36]).range([0.35, 1]).clamp(true);
-    svg.selectAll(".mismatch-marker")
-        .data(choiceMode ? [] : seasonsSorted.map(s => seasonInfo[s]).filter(s => !s.matches))
-        .enter().append("path")
-        .attr("class", "mismatch-marker")
-        .attr("transform", s => `translate(${xScale(s.season)},${plotH + STRIP / 2 + 1})`)
-        .attr("d", d3.symbol().type(d3.symbolTriangle).size(s => s.merit_gap >= 0.15 ? 70 : 35))
-        .attr("fill", ACCENT)
-        .attr("opacity", s => gapOpacity(s.merit_gap))
-        .on("mouseenter mousemove", (event, s) => showTooltip(
-            `<strong>${s.season}: ${s.merit_gap >= 0.15 ? "MVP controcorrente" : "quasi pari merito"}</strong><br>` +
-            `Ha vinto <b>${s.winner}</b> (share attesa ${fmtPct(s.winner_expected)})<br>` +
-            `Scelta statistica: <b>${s.statistical_choice}</b> (${fmtPct(s.choice_expected)})<br>` +
-            `Click per selezionare l'MVP reale`, event))
-        .on("mouseleave", hideTooltip)
-        .on("click", (_event, s) => {
-            const w = globalData.find(d => d.Season === s.season && d.Player === s.winner);
-            if (w) selectCandidate(w);
-        });
 }
 
 function renderBoxPlot(data) {
@@ -890,6 +931,12 @@ function renderBoxPlot(data) {
     const metric = currentMetric === "Expected_Share" ? "PIE" : currentMetric;
     d3.select("#boxplot-title").text(`${label(metric)} per era · come vota ogni era`);
     d3.select("#boxplot-desc").html(`Sotto ogni era: <strong>peso del merito</strong> vs <strong>peso del record di squadra</strong> nel voto (ristimati sulla selezione). Click su un box per filtrare l'era.`);
+
+    renderCardLegend("#boxplot-legend", [
+        { type: "eras" },
+        { type: "rect", fill: MERIT_COLOR, text: "Peso merito (PIE)" },
+        { type: "rect", fill: TEAM_COLOR, text: "Peso record squadra" },
+    ]);
 
     const container = d3.select("#boxplot-chart");
     container.selectAll("*").remove();
@@ -902,7 +949,7 @@ function renderBoxPlot(data) {
         return;
     }
 
-    const margin = { top: 10, right: 15, bottom: 64, left: 45 };
+    const margin = { top: 10, right: 15, bottom: 50, left: 57 };
     const { width, height } = chartSize(container, margin);
     const svg = appendSvg(container, width, height, margin);
 
@@ -912,6 +959,7 @@ function renderBoxPlot(data) {
     svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(xScale));
     renderEraVoteModels(svg, data, xScale, height);
     svg.append("g").call(d3.axisLeft(yScale).ticks(5).tickFormat(v => formatMetric(metric, v)));
+    addYAxisTitle(svg, height, margin.left, axisTitle(metric));
     if (metric === "Narrative" && yScale.domain()[0] < 0) {
         svg.append("line").attr("class", "zero-line")
             .attr("x1", 0).attr("x2", width).attr("y1", yScale(0)).attr("y2", yScale(0));
@@ -965,11 +1013,6 @@ function renderEraVoteModels(svg, data, xScale, height) {
         g.append("title").text(`${era} (n=${model.n}): peso merito ${model.bPIE.toFixed(3)} · peso squadra ${model.bW.toFixed(3)} · R² ${fmtPct(Math.max(0, model.r2))}`);
     });
 
-    const lg = svg.append("g").attr("transform", `translate(0,${height + 58})`);
-    [["era-model-pie", "peso del merito (PIE)", 0], ["era-model-team", "peso del record di squadra", 130]].forEach(([cls, text, lx]) => {
-        lg.append("rect").attr("class", cls).attr("x", lx).attr("y", -8).attr("width", 10).attr("height", 9);
-        lg.append("text").attr("class", "era-model-legend").attr("x", lx + 14).text(text);
-    });
 }
 
 function compareBars(panel, rows, faded) {
@@ -1006,13 +1049,13 @@ function renderModelPanel(selected, isFiltered) {
     const collapse = rows => rows.filter(d => d.MVP_Share < 0.10).length / rows.length;
     const coefFmt = v => v.toFixed(3);
     compareBars(panel, [
-        { name: "Peso merito (PIE)", sel: model.bPIE, all: all.bPIE, max: COEF_SCALE_MAX, fmt: coefFmt, color: "#1a252f" },
-        { name: "Peso squadra (W%)", sel: model.bW, all: all.bW, max: COEF_SCALE_MAX, fmt: coefFmt, color: "#95a5a6" },
-        { name: "R² statistiche", sel: model.r2, all: all.r2, max: 1, fmt: fmtPct, color: "#2166AC" },
-        { name: "Voto ≈ 0 (<10%)", sel: collapse(selected), all: collapse(globalData), max: 1, fmt: fmtPct, color: "#B2182B" },
+        { name: "Peso merito (PIE)", sel: model.bPIE, all: all.bPIE, max: COEF_SCALE_MAX, fmt: coefFmt, color: MERIT_COLOR },
+        { name: "Peso squadra (W%)", sel: model.bW, all: all.bW, max: COEF_SCALE_MAX, fmt: coefFmt, color: TEAM_COLOR },
+        { name: "R² statistiche", sel: model.r2, all: all.r2, max: 1, fmt: fmtPct, color: OTHER_BAR_COLOR },
+        { name: "Voto ≈ 0 (<10%)", sel: collapse(selected), all: collapse(globalData), max: 1, fmt: fmtPct, color: OTHER_BAR_COLOR },
     ], model.n < 25);
     panel.append("p").attr("class", "legend-note")
-        .html(`barra = selezione · <span class="neg">|</span> = tutti i candidati${model.n < 25 ? " · barre chiare = campione piccolo" : ""}`);
+        .html(`barra = selezione · <b>|</b> = tutti i candidati${model.n < 25 ? " · barre chiare = campione piccolo" : ""}`);
 }
 
 function narrativeExtremes(selected) {
@@ -1041,7 +1084,7 @@ function renderNarrativePanel(selected) {
         .attr("x1", labelW + x(0)).attr("x2", labelW + x(0)).attr("y1", 0).attr("y2", rows.length * rowH + 2);
     rows.forEach((d, i) => {
         const g = svg.append("g").attr("class", "narrative-row").attr("transform", `translate(0,${i * rowH + 2})`)
-            .on("click", () => selectCandidate(d));
+            .on("click", () => toggleCandidate(d));
         g.append("rect").attr("class", "row-hit").attr("width", w).attr("height", rowH);
         g.append("text").attr("class", "model-label").attr("x", 0).attr("y", 10)
             .text(`${d.Player.split(" ").pop()} ${d.Season.slice(2)}${d.Is_MVP_Winner === 1 ? " ★" : ""}${d.Prev_MVP ? " ↺" : ""}`);
@@ -1059,7 +1102,7 @@ function computeDynamicMVPScore(selectedPlayers, isFiltered) {
     const n = selectedPlayers.length;
     const listOl = d3.select("#top-mvp-list");
     listOl.selectAll("*").remove();
-    d3.select("#top-mvp-title").text(isFiltered ? `Top 3 MVP Score (selezione)` : `Top 3 MVP Score (tutti)`);
+    d3.select("#top-mvp-title").text(isFiltered ? `Top 5 MVP Score (selezione)` : `Top 5 MVP Score (tutti)`);
     if (n === 0) return;
 
     const metrics = Object.keys(MVP_SCORE_WEIGHTS);
@@ -1086,14 +1129,14 @@ function computeDynamicMVPScore(selectedPlayers, isFiltered) {
         p.dynamic_score = usedWeight > 0 ? score / usedWeight : 0;
     });
 
-    const ranked = [...selectedPlayers].sort((a, b) => b.dynamic_score - a.dynamic_score).slice(0, 3);
+    const ranked = [...selectedPlayers].sort((a, b) => b.dynamic_score - a.dynamic_score).slice(0, 5);
     const w = listOl.node().getBoundingClientRect().width || 260;
     const labelW = 104, rowH = 14, barW = w - labelW - 4;
     const x = d3.scaleLinear().domain([0, Math.max(2.5, d3.max(ranked, p => p.dynamic_score))]).range([0, barW]);
     const svg = listOl.append("svg").attr("width", w).attr("height", ranked.length * rowH + 2);
     ranked.forEach((p, i) => {
         const g = svg.append("g").attr("class", "narrative-row").attr("transform", `translate(0,${i * rowH})`)
-            .on("click", () => selectCandidate(p));
+            .on("click", () => toggleCandidate(p));
         g.append("rect").attr("class", "row-hit").attr("width", w).attr("height", rowH);
         g.append("text").attr("class", "model-label").attr("x", 0).attr("y", 10)
             .text(`${p.Player.split(" ").pop()} ${p.Season.slice(2)}${p.Is_MVP_Winner === 1 ? " ★" : ""}`);
@@ -1116,7 +1159,7 @@ let selectedCandidateKey = null;
 function resetCandidateFocus() {
     selectedCandidateKey = null;
     d3.selectAll(".point").classed("selected-highlight", false);
-    d3.selectAll(".polyline").classed("candidate-focus", false);
+    d3.selectAll(".polyline, .vote-seg").classed("candidate-focus", false);
     if (pcaG) {
         pcaG.select(".season-link-layer").selectAll("*").remove();
     }
@@ -1132,6 +1175,13 @@ function clearCandidateSelection() {
 function renderCandidatePanel(d) {
     const box = d3.select("#selected-player-info");
     box.selectAll("*").remove();
+    box.append("button")
+        .attr("class", "close-candidate")
+        .attr("type", "button")
+        .attr("title", "Deseleziona (Esc)")
+        .attr("aria-label", "Deseleziona il candidato")
+        .text("✕")
+        .on("click", clearCandidateSelection);
     box.append("div").html(
         `<strong>${d.Player} (${d.Season})</strong>${d.Is_MVP_Winner === 1 ? " ★" : ""}${d.Prev_MVP ? ` <span class="badge">↺ MVP uscente</span>` : ""}` +
         ` <span class="muted">${d.Team} · ${d.Tactical_Era}</span>`);
@@ -1177,20 +1227,20 @@ function renderCandidatePanel(d) {
             .attr("fill", ERA_COLORS[winner.Tactical_Era]).attr("stroke", "#000").attr("stroke-width", 0.7);
     }
     if (d.Is_MVP_Winner !== 1) {
-        g.append("circle").attr("cx", x(Math.max(0, d.Expected_Share))).attr("cy", ys).attr("r", 3.8).attr("fill", ACCENT);
+        g.append("circle").attr("cx", x(Math.max(0, d.Expected_Share))).attr("cy", ys).attr("r", 3.8).attr("fill", SELECT_COLOR);
     }
     [0, 0.5, 1].forEach(t => g.append("text").attr("class", "tick-mini").attr("x", x(t)).attr("y", 60)
         .attr("text-anchor", t === 0 ? "start" : t === 1 ? "end" : "middle").text(fmtPct(t)));
 
     box.append("p").attr("class", "legend-note").html(
-        `○ attesa → ● reale · ★ MVP · ◯ scelta statistica · <span class="neg">—</span> scarto${d.Is_MVP_Winner !== 1 ? ` · <span class="neg">●</span> ${d.Player.split(" ").pop()}` : ""}`);
+        `○ attesa → ● reale · ★ MVP · ◯ scelta statistica · — scarto${d.Is_MVP_Winner !== 1 ? ` · ● ${d.Player.split(" ").pop()}` : ""}`);
 
     let verdict;
     if (info.matches) {
         verdict = d.Player === info.winner ? "Era la scelta statistica e ha vinto." : `Ha vinto la scelta statistica, ${info.winner}.`;
     } else if (d.Player === info.winner) {
         verdict = info.merit_gap >= 0.15
-            ? `<b class="neg">MVP controcorrente</b>: la scelta statistica era ${info.statistical_choice}.`
+            ? `<b>MVP controcorrente</b>: la scelta statistica era ${info.statistical_choice}.`
             : `Ha vinto su ${info.statistical_choice}, quasi a pari merito statistico.`;
     } else if (d.Player === info.statistical_choice) {
         verdict = `<b class="neg">Snobbato</b>: era la scelta statistica, ha vinto ${info.winner}.`;
@@ -1202,6 +1252,11 @@ function renderCandidatePanel(d) {
         `PIE ${d.PIE} · W% ${fmtPct(d.Team_W_PCT)} · voto ${fmtPct(d.MVP_Share)} (atteso ${fmtPct(Math.max(0, d.Expected_Share))})${score}<br>${verdict}`);
 }
 
+function toggleCandidate(d) {
+    if (keyOf(d) === selectedCandidateKey) clearCandidateSelection();
+    else selectCandidate(d);
+}
+
 function selectCandidate(d) {
     selectedCandidateKey = keyOf(d);
 
@@ -1209,12 +1264,15 @@ function selectCandidate(d) {
     d3.selectAll(".polyline")
         .classed("candidate-focus", p => keyOf(p) === selectedCandidateKey)
         .classed("dimmed", p => keyOf(p) !== selectedCandidateKey);
-    d3.selectAll(".vote-seg").classed("dimmed", p => keyOf(p) !== selectedCandidateKey);
+    d3.selectAll(".vote-seg")
+        .classed("candidate-focus", p => keyOf(p) === selectedCandidateKey)
+        .classed("dimmed", p => keyOf(p) !== selectedCandidateKey);
 
     renderCandidatePanel(d);
     drawSeasonLink(d.Season);
     renderPlayerVsWinnersBoxPlot(d);
     renderLineChart(currentSelectionData);
+    updateResetLink();
 }
 
 function renderPlayerVsWinnersBoxPlot(player) {
@@ -1229,7 +1287,7 @@ function renderPlayerVsWinnersBoxPlot(player) {
     d3.select("#boxplot-desc").html(
         `Box = ${label(metric)} dei vincitori MVP dell'era (n=${winnerVals.length}); ` +
         (hasPlayerVal
-            ? `linea rossa = <strong>${player.Player}</strong>. `
+            ? `linea nera tratteggiata = <strong>${player.Player}</strong>. `
             : `${label(metric)} non disponibile per <strong>${player.Player}</strong>. `) +
         `<a id="reset-candidate-focus">↺ torna al confronto per era</a>`
     );
@@ -1238,10 +1296,16 @@ function renderPlayerVsWinnersBoxPlot(player) {
         clearCandidateSelection();
     });
 
+    renderCardLegend("#boxplot-legend", [
+        { type: "rect", fill: ERA_COLORS[era] || "#ccc", opacity: 0.6, stroke: "#000", text: `Vincitori MVP ${era} (box)` },
+        { type: "star", fill: "#fff", stroke: "#000", text: "Singolo MVP dell'era" },
+        { type: "line", color: SELECT_COLOR, width: 1.5, dash: "4,3", text: player.Player },
+    ]);
+
     const container = d3.select("#boxplot-chart");
     container.selectAll("*").remove();
 
-    const margin = { top: 10, right: 110, bottom: 30, left: 45 };
+    const margin = { top: 10, right: 110, bottom: 30, left: 57 };
     const { width, height } = chartSize(container, margin);
     const svg = appendSvg(container, width, height, margin);
 
@@ -1252,6 +1316,7 @@ function renderPlayerVsWinnersBoxPlot(player) {
 
     svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(xScale));
     svg.append("g").call(d3.axisLeft(yScale).ticks(5).tickFormat(v => formatMetric(metric, v)));
+    addYAxisTitle(svg, height, margin.left, axisTitle(metric));
 
     if (winnerVals.length > 0) {
         const q1 = d3.quantile(winnerVals, 0.25);
@@ -1285,9 +1350,9 @@ function renderPlayerVsWinnersBoxPlot(player) {
     if (!hasPlayerVal) return;
     const py = yScale(playerVal);
     svg.append("line").attr("x1", 0).attr("x2", width).attr("y1", py).attr("y2", py)
-        .attr("stroke", ACCENT).attr("stroke-width", 1.5).attr("stroke-dasharray", "4,3");
-    svg.append("circle").attr("cx", width + 8).attr("cy", py).attr("r", 4.5).attr("fill", ACCENT);
+        .attr("stroke", SELECT_COLOR).attr("stroke-width", 1.5).attr("stroke-dasharray", "4,3");
+    svg.append("circle").attr("cx", width + 8).attr("cy", py).attr("r", 4.5).attr("fill", SELECT_COLOR);
     svg.append("text").attr("x", width + 16).attr("y", py + 4)
-        .attr("font-size", "0.68rem").attr("fill", ACCENT)
+        .attr("font-size", "0.68rem").attr("fill", SELECT_COLOR)
         .text(`${player.Player.split(" ").pop()} (${formatMetric(metric, playerVal)})`);
 }

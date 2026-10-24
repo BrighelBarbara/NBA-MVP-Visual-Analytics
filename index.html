@@ -18,14 +18,15 @@
 
         <section class="card" id="pca-card">
             <h2>Spatial PCA Projection (PC1 vs PC2)</h2>
-            <p class="card-desc">Brush per selezionare · click su un punto per il dettaglio · click su un'era per filtrarla.</p>
+            <p class="card-desc">Brush per selezionare · click su un punto per il dettaglio · click su un'era per filtrarla · Esc o click sul vuoto per deselezionare.</p>
             <div id="pca-legend" class="legend"></div>
             <div id="pca-plot" class="chart"></div>
         </section>
 
         <section class="card" id="pcp-card">
             <h2>Parallel Coordinates Plot: merito vs voto</h2>
-            <p class="card-desc">Ultimo tratto: voto atteso dalle statistiche → voto reale. <span class="pos">Blu</span> = più voti del previsto, <span class="neg">rosso</span> = meno.</p>
+            <p class="card-desc">Ultimo tratto (fascia VOTO): voto atteso dalle statistiche → voto reale.</p>
+            <div id="pcp-legend" class="legend"></div>
             <div id="pcp-plot" class="chart"></div>
         </section>
 
@@ -41,22 +42,24 @@
             <h3>Premiati e snobbati dalla narrativa</h3>
             <div id="narrative-panel" class="narrative-panel"></div>
 
-            <h3 id="top-mvp-title">Top 3 MVP Score</h3>
+            <h3 id="top-mvp-title">Top 5 MVP Score</h3>
             <ol id="top-mvp-list" class="ranking-list"></ol>
             <p id="score-weights" class="score-note"></p>
 
-            <a id="reset-all-filters" class="reset-link" href="#" style="display:none">↺ azzera tutti i filtri</a>
+            <a id="reset-all-filters" class="reset-link" href="#" style="display:none" title="Azzera brush, filtro per era e candidato selezionato (Esc)">↺ azzera tutti i filtri (Esc)</a>
         </aside>
 
         <section class="card" id="line-card">
             <h2 id="linechart-title">Share attesa: MVP reale vs scelta statistica</h2>
             <p class="card-desc" id="linechart-desc">Trascina sulla timeline per la tendenza del periodo · click su un'etichetta del PCP per cambiare statistica.</p>
+            <div id="line-legend" class="legend"></div>
             <div id="line-chart" class="chart"></div>
         </section>
 
         <section class="card" id="boxplot-card">
             <h2 id="boxplot-title">PIE per era · come vota ogni era</h2>
             <p class="card-desc" id="boxplot-desc"></p>
+            <div id="boxplot-legend" class="legend"></div>
             <div id="boxplot-chart" class="chart"></div>
         </section>
     </div>

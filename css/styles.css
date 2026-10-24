@@ -117,13 +117,13 @@ svg text {
 }
 
 .point.selected-highlight {
-    stroke: #b2182b !important;
+    stroke: #000 !important;
     stroke-width: 3px !important;
     opacity: 1 !important;
 }
 
 .season-link {
-    stroke: #b2182b;
+    stroke: #555;
     stroke-width: 1.5px;
     stroke-dasharray: 4,3;
     pointer-events: none;
@@ -131,7 +131,7 @@ svg text {
 
 .season-link-end {
     fill: none;
-    stroke: #1a252f;
+    stroke: #555;
     stroke-width: 1.5px;
     pointer-events: none;
 }
@@ -183,8 +183,7 @@ svg text {
 }
 
 .polyline.candidate-focus {
-    stroke: #b2182b !important;
-    stroke-width: 3px !important;
+    stroke-width: 3.5px !important;
     opacity: 1 !important;
 }
 
@@ -193,9 +192,16 @@ svg text {
     font-weight: 600;
 }
 
+.axis-title {
+    font-size: 10px;
+    font-weight: 600;
+    fill: #34495e;
+}
+
 .axis-label.active-metric {
-    fill: #b2182b;
-    font-weight: 700;
+    fill: #000;
+    font-weight: 800;
+    font-size: 11px;
 }
 
 .vote-band {
@@ -216,9 +222,9 @@ svg text {
 }
 
 .brush .selection {
-    fill: #3498db;
-    fill-opacity: 0.25;
-    stroke: #2980b9;
+    fill: #7f8c8d;
+    fill-opacity: 0.15;
+    stroke: #555;
     stroke-dasharray: 4;
 }
 
@@ -237,17 +243,10 @@ svg text {
 
 .series-selection {
     fill: none;
-    stroke: #6a3d9a;
+    stroke: #555;
     stroke-width: 2px;
-}
-
-.inline-legend {
-    font-size: 9.5px;
-    fill: #555;
-}
-
-.mismatch-marker {
-    cursor: pointer;
+    stroke-dasharray: 1,3;
+    stroke-linecap: round;
 }
 
 .trend-line {
@@ -282,7 +281,8 @@ svg text {
 }
 
 #boxplot-desc a {
-    color: #2166AC;
+    color: #1a252f;
+    text-decoration: underline;
     cursor: pointer;
 }
 
@@ -302,6 +302,12 @@ svg text {
     padding: 1px 5px;
     border-radius: 10px;
     border: 1px solid transparent;
+}
+
+.legend-heading {
+    font-weight: 600;
+    color: #555;
+    align-self: center;
 }
 
 .legend-item.clickable {
@@ -327,11 +333,34 @@ svg text {
 }
 
 .info-box {
+    position: relative;
     background: #ecf0f1;
     padding: 7px 9px;
     border-radius: 6px;
     margin-top: 4px;
     line-height: 1.4;
+}
+
+.close-candidate {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #555;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.info-box > div:first-of-type {
+    padding-right: 20px;
+}
+
+.close-candidate:hover {
+    background: #d5dbdb;
 }
 
 .info-box .verdict {
@@ -351,7 +380,7 @@ svg text {
     font-size: 0.68rem;
 }
 
-.pos { color: #2166AC; }
+.pos { color: #762A83; }
 .neg { color: #B2182B; }
 
 .panel-note {
@@ -381,7 +410,7 @@ svg text {
 }
 
 .model-ref {
-    stroke: #b2182b;
+    stroke: #1a252f;
     stroke-width: 2px;
 }
 
@@ -390,9 +419,6 @@ svg text {
     fill: #7f8c8d;
 }
 
-.inline-link {
-    color: #2166AC;
-}
 
 .narrative-panel {
     display: grid;
@@ -434,7 +460,7 @@ svg text {
 }
 
 .ranking-list li:hover {
-    color: #2166AC;
+    text-decoration: underline;
 }
 
 .score-note {
@@ -448,7 +474,7 @@ svg text {
     display: inline-block;
     margin-top: 8px;
     font-size: 0.78rem;
-    color: #2166AC;
+    color: #1a252f;
 }
 
 .chart-tooltip {
@@ -467,7 +493,7 @@ svg text {
 }
 
 .selection-dot {
-    fill: #6a3d9a;
+    fill: #555;
 }
 
 .narr-ring {
@@ -475,7 +501,7 @@ svg text {
     stroke-width: 1.6px;
     pointer-events: none;
 }
-.narr-ring.pos { stroke: #2166AC; }
+.narr-ring.pos { stroke: #762A83; }
 .narr-ring.neg { stroke: #B2182B; }
 
 .narr-label {
@@ -486,27 +512,14 @@ svg text {
     stroke-width: 3px;
     pointer-events: none;
 }
-.narr-label.pos { fill: #2166AC; }
+.narr-label.pos { fill: #762A83; }
 .narr-label.neg { fill: #B2182B; }
 
 .gap-line {
-    stroke: #B2182B;
+    stroke: #555;
     stroke-width: 2.5px;
 }
-.gap-line.minor {
-    stroke-width: 1.5px;
-    opacity: 0.45;
-}
 
-.gap-label {
-    font-size: 9.5px;
-    font-weight: 700;
-    fill: #B2182B;
-    paint-order: stroke;
-    stroke: #fff;
-    stroke-width: 3px;
-    pointer-events: none;
-}
 
 .clean-band {
     fill: #009E73;
@@ -521,8 +534,8 @@ svg text {
     pointer-events: none;
 }
 
-.era-model-pie { fill: #1a252f; }
-.era-model-team { fill: #95a5a6; }
+.era-model-pie { fill: #4d4d4d; }
+.era-model-team { fill: #bdbdbd; }
 
 .era-model-val, .era-model-na {
     font-size: 9px;
@@ -535,10 +548,6 @@ svg text {
     fill: #1a252f;
 }
 
-.era-model-legend {
-    font-size: 9px;
-    fill: #7f8c8d;
-}
 
 .biplot { pointer-events: none; }
 .biplot-arrow {
@@ -567,14 +576,17 @@ svg text {
     opacity: 0.8;
 }
 .vote-seg.dimmed { opacity: 0.03 !important; }
+.vote-seg.candidate-focus {
+    stroke-width: 3.5px;
+    opacity: 1 !important;
+}
 
 .bar-track { fill: #ecf0f1; }
 .bar-track-line { stroke: #d5dbdb; stroke-width: 6px; stroke-linecap: round; }
 .era-model-track { fill: #ecf0f1; }
-.era-model-r2 { fill: #2166AC; }
 .dot-expected { fill: #fff; stroke: #1a252f; stroke-width: 1.5px; }
 .dot-season { fill: #95a5a6; }
-.dot-choice { fill: none; stroke: #1a252f; stroke-width: 1.6px; }
+.dot-choice { fill: none; stroke: #555; stroke-width: 1.6px; }
 .tick-mini { font-size: 8.5px; fill: #7f8c8d; }
 .clean-band-swatch { fill: #009E73; opacity: 0.15; }
 .row-hit { fill: transparent; }
