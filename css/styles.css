@@ -492,6 +492,16 @@ svg text {
     transition: opacity 0.1s ease;
 }
 
+.direct-label {
+    font-size: 9.5px;
+    font-weight: 600;
+    fill: #555;
+    paint-order: stroke;
+    stroke: #fff;
+    stroke-width: 3px;
+    pointer-events: none;
+}
+
 .selection-dot {
     fill: #555;
 }

@@ -208,18 +208,20 @@ function clearBrushes(root) {
 function setupDeselectOnEmptyClick() {
     DESELECT_CARDS.forEach(id => {
         const card = document.getElementById(id);
-        let downTarget = null;
-        card.addEventListener("mousedown", (event) => { downTarget = event.target; }, true);
+        let downOnEmpty = false;
+        card.addEventListener("mousedown", (event) => {
+            downOnEmpty = !event.target.closest(NO_CLEAR_TARGETS);
+        }, true);
         card.addEventListener("click", (event) => {
-            const start = downTarget;
-            downTarget = null;
-            if (!start || start.closest(NO_CLEAR_TARGETS) || event.target.closest(NO_CLEAR_TARGETS)) return;
+            const onEmpty = downOnEmpty && !event.target.closest(NO_CLEAR_TARGETS);
+            downOnEmpty = false;
+            if (!onEmpty) return;
             clearBrushes(d3.select(card));
             const clearEra = id === "boxplot-card" && filters.era;
             if (clearEra) filters.era = null;
             if (selectedCandidateKey) clearCandidateSelection();
             else if (clearEra) applyFilters();
-        });
+        }, true);
     });
 }
 
@@ -784,8 +786,6 @@ function renderLineChart(data) {
         { type: "line", cls: "series-winner", star: true, text: "MVP reale" },
         { type: "line", cls: "series-reference", text: refLabel.charAt(0).toUpperCase() + refLabel.slice(1) },
     ];
-    if (filtered) legendItems.push({ type: "line", cls: "series-selection", text: "Media selezione" });
-    if (candidate) legendItems.push({ type: "circle", fill: SELECT_COLOR, text: "Selezionato" });
     renderCardLegend("#line-legend", legendItems);
 
     const container = d3.select("#line-chart");
@@ -822,7 +822,7 @@ function renderLineChart(data) {
     }
 
     const xScale = d3.scalePoint().domain(seasonsSorted).range([0, width]).padding(0.3);
-    const yScale = d3.scaleLinear().domain(d3.extent(allValues)).nice().range([plotH, 0]);
+    const yScale = d3.scaleLinear().domain(d3.extent([0, ...allValues])).nice().range([plotH, 0]);
 
     svg.append("g")
         .attr("transform", `translate(0,${height})`)
@@ -857,6 +857,13 @@ function renderLineChart(data) {
             .enter().append("circle")
             .attr("class", "selection-dot")
             .attr("cx", p => xScale(p.season)).attr("cy", p => yScale(p.value)).attr("r", 2.5);
+        const last = selection.filter(p => valid(p.value)).pop();
+        if (last) {
+            svg.append("text").attr("class", "direct-label")
+                .attr("x", xScale(last.season)).attr("y", yScale(last.value) + 14)
+                .attr("text-anchor", "end")
+                .text("media selezione");
+        }
     }
     svg.append("path").attr("class", "series-winner").attr("d", lineOf(winners));
 
@@ -875,11 +882,12 @@ function renderLineChart(data) {
         svg.append("line")
             .attr("x1", cx).attr("x2", cx).attr("y1", 0).attr("y2", plotH)
             .attr("stroke", SELECT_COLOR).attr("stroke-width", 1).attr("stroke-dasharray", "3,3");
-        svg.append("circle").attr("cx", cx).attr("cy", cy).attr("r", 4.5).attr("fill", SELECT_COLOR);
+        svg.append("circle").attr("cx", cx).attr("cy", cy).attr("r", 7)
+            .attr("fill", "none").attr("stroke", SELECT_COLOR).attr("stroke-width", 2);
         svg.append("text")
             .attr("x", cx + (cx > width * 0.75 ? -7 : 7)).attr("y", cy - 7)
             .attr("text-anchor", cx > width * 0.75 ? "end" : "start")
-            .attr("font-size", "0.68rem").attr("fill", SELECT_COLOR)
+            .attr("class", "direct-label").style("fill", SELECT_COLOR)
             .text(`${candidate.Player} (${formatMetric(metric, candidate[metric])})`);
     }
 
