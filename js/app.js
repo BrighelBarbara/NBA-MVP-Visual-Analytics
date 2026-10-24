@@ -1,15 +1,27 @@
+// Tutti i colori vengono da palette di d3 (d3-scale-chromatic); ogni tinta ha un solo significato.
+// Ere: categorica Tableau10 (blu, verde, marrone), scelta per restare distinguibile anche con daltonismo.
 const ERA_COLORS = {
-    "Pre-Analytics": "#0072B2",
-    "Transition": "#E69F00",
-    "Small-Ball": "#009E73"
+    "Pre-Analytics": d3.schemeTableau10[0],
+    "Transition": d3.schemeTableau10[4],
+    "Small-Ball": d3.schemeTableau10[8]
 };
 const ERAS = Object.keys(ERA_COLORS);
 
-const RESIDUAL_COLORS = { positive: "#762A83", negative: "#B2182B" };
+// Voto reale vs atteso: estremi della divergente PuOr (viola = sopra l'atteso, arancione = sotto).
+// Le varianti chiare servono solo su sfondo scuro (tooltip).
+const RESIDUAL_COLORS = { positive: d3.schemePuOr[9][8], negative: d3.schemePuOr[9][0] };
+const RESIDUAL_COLORS_LIGHT = { positive: d3.schemePuOr[9][6], negative: d3.schemePuOr[9][2] };
 const SELECT_COLOR = "#000";
-const MERIT_COLOR = "#4d4d4d";
-const TEAM_COLOR = "#bdbdbd";
-const OTHER_BAR_COLOR = "#8c8c8c";
+// Grigi (d3.schemeGreys) solo per grandezze non categoriche: scuro = merito, chiaro = record squadra.
+const MERIT_COLOR = d3.schemeGreys[9][6];
+const TEAM_COLOR = d3.schemeGreys[9][3];
+const OTHER_BAR_COLOR = d3.schemeGreys[9][4];
+
+const rootStyle = document.documentElement.style;
+rootStyle.setProperty("--pos", RESIDUAL_COLORS.positive);
+rootStyle.setProperty("--neg", RESIDUAL_COLORS.negative);
+rootStyle.setProperty("--merit", MERIT_COLOR);
+rootStyle.setProperty("--team", TEAM_COLOR);
 
 const METRIC_LABELS = {
     PTS: "PTS", REB: "REB", AST: "AST", TS_PCT: "TS%", WS: "WS", PIE: "PIE",
@@ -327,10 +339,10 @@ function renderCardLegend(target, items) {
     legend.selectAll("*").remove();
     items.forEach(item => {
         if (item.type === "eras") {
-            legend.append("span").attr("class", "legend-heading").text("Era:");
+            legend.append("span").attr("class", "legend-heading legend-shared").text("Era:");
             ERAS.forEach(era => {
                 const el = legend.append("div")
-                    .attr("class", "legend-item")
+                    .attr("class", "legend-item legend-shared")
                     .classed("active", filters.era === era)
                     .attr("data-era", era);
                 el.append("span").attr("class", "legend-swatch").style("background", ERA_COLORS[era]);
@@ -338,7 +350,7 @@ function renderCardLegend(target, items) {
             });
             return;
         }
-        const el = legend.append("div").attr("class", "legend-item");
+        const el = legend.append("div").attr("class", "legend-item").classed("legend-shared", !!item.shared);
         const wide = item.type === "line";
         const icon = el.append("svg").attr("width", wide ? 20 : 14).attr("height", 14);
         if (item.type === "star" || item.type === "circle") {
@@ -366,10 +378,16 @@ function renderCardLegend(target, items) {
     });
 }
 
+// Voci comuni a tutti i grafici: mostrate una volta nella legenda globale in alto;
+// nelle card hanno classe .legend-shared e compaiono solo a grafico espanso.
 function renderLegend() {
-    renderCardLegend("#pca-legend", [
+    renderCardLegend("#global-legend", [
         { type: "eras" },
         { type: "star", text: "MVP reale", stroke: "#000" },
+    ]);
+    renderCardLegend("#pca-legend", [
+        { type: "eras" },
+        { type: "star", text: "MVP reale", stroke: "#000", shared: true },
         { type: "circle", text: "Candidato (area = share voto)" },
     ]);
     renderCardLegend("#pcp-legend", [
@@ -549,7 +567,7 @@ function renderPCAScatterplot(data) {
 
 function candidateTooltipHtml(d) {
     const fmt = v => (v === null || v === undefined) ? "N/D" : v;
-    const narrativeColor = d.Narrative >= 0 ? "#c2a5cf" : "#fc9272";
+    const narrativeColor = d.Narrative >= 0 ? RESIDUAL_COLORS_LIGHT.positive : RESIDUAL_COLORS_LIGHT.negative;
     return `<strong>${d.Player}</strong> (${d.Season}, ${d.Team})${d.Is_MVP_Winner === 1 ? " ★ MVP" : ""}${d.Prev_MVP ? " · MVP uscente" : ""}<br>` +
         `${d.Tactical_Era} · PTS ${d.PTS} · PIE ${d.PIE} · WS ${fmt(d.WS)} · Team W% ${fmtPct(d.Team_W_PCT)}<br>` +
         `Voto: reale <b>${fmtPct(d.MVP_Share)}</b> · atteso ${fmtPct(Math.max(0, d.Expected_Share))} · ` +
@@ -784,6 +802,7 @@ function renderLineChart(data) {
         { type: "line", cls: "series-winner", star: true, text: "MVP reale" },
         { type: "line", cls: "series-reference", text: refLabel.charAt(0).toUpperCase() + refLabel.slice(1) },
     ];
+    if (filtered) legendItems.push({ type: "line", cls: "series-selection", text: "Media selezione" });
     renderCardLegend("#line-legend", legendItems);
 
     const container = d3.select("#line-chart");
@@ -1304,7 +1323,6 @@ function renderPlayerVsWinnersBoxPlot(player) {
 
     renderCardLegend("#boxplot-legend", [
         { type: "rect", fill: ERA_COLORS[era] || "#ccc", opacity: 0.6, stroke: "#000", text: `Vincitori MVP ${era} (box)` },
-        { type: "star", fill: "#fff", stroke: "#000", text: "Singolo MVP dell'era" },
         { type: "line", color: SELECT_COLOR, width: 1.5, dash: "4,3", text: player.Player },
     ]);
 
@@ -1341,16 +1359,6 @@ function renderPlayerVsWinnersBoxPlot(player) {
         svg.append("line").attr("x1", bx).attr("x2", bx + bw)
             .attr("y1", yScale(median)).attr("y2", yScale(median))
             .attr("stroke", "#000").attr("stroke-width", 2);
-
-        const star = d3.symbol().type(d3.symbolStar).size(45);
-        svg.selectAll(".era-winner")
-            .data(winners.filter(w => w[metric] !== null))
-            .enter().append("path")
-            .attr("class", "era-winner")
-            .attr("transform", (w, i) => `translate(${bx + bw / 2 + ((i % 5) - 2) * bw * 0.14},${yScale(w[metric])})`)
-            .attr("d", star).attr("fill", "#fff").attr("stroke", "#000").attr("stroke-width", 0.7)
-            .on("mouseenter mousemove", (event, w) => showTooltip(`${w.Player} ${w.Season}: ${formatMetric(metric, w[metric])}`, event))
-            .on("mouseleave", hideTooltip);
     }
 
     if (!hasPlayerVal) return;
