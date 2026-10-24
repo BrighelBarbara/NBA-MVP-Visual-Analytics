@@ -310,14 +310,6 @@ svg text {
     align-self: center;
 }
 
-.legend-item.clickable {
-    cursor: pointer;
-}
-
-.legend-item.clickable:hover {
-    background: #f4f6f9;
-}
-
 .legend-item.active {
     border-color: #1a252f;
     background: #ecf0f1;

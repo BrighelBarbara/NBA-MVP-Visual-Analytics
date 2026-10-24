@@ -330,11 +330,9 @@ function renderCardLegend(target, items) {
             legend.append("span").attr("class", "legend-heading").text("Era:");
             ERAS.forEach(era => {
                 const el = legend.append("div")
-                    .attr("class", "legend-item clickable")
+                    .attr("class", "legend-item")
                     .classed("active", filters.era === era)
-                    .attr("data-era", era)
-                    .attr("title", `Filtra l'era ${era} su tutte le viste`)
-                    .on("click", () => toggleEra(era));
+                    .attr("data-era", era);
                 el.append("span").attr("class", "legend-swatch").style("background", ERA_COLORS[era]);
                 el.append("span").text(era);
             });
