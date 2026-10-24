@@ -1,12 +1,3 @@
-"""
-Figure statiche per report e slide, generate da data/insights/insights.json
-(output di mvp_merit_analysis.py). Ogni figura corrisponde a un insight
-della sezione "Discovered insights" e a uno scenario della demo, in cui lo
-stesso risultato si ritrova interagendo con la dashboard.
-
-Uso: python3 analysis/make_figures.py
-Output: analysis/figures/*.png
-"""
 import csv
 import json
 from pathlib import Path
@@ -21,7 +12,6 @@ INSIGHTS = json.loads((ROOT / "data" / "insights" / "insights.json").read_text()
 OUT = ROOT / "analysis" / "figures"
 OUT.mkdir(exist_ok=True)
 
-# Stessa palette della dashboard (Okabe-Ito, colorblind-safe)
 ERA_COLORS = {"Pre-Analytics": "#0072B2", "Transition": "#E69F00", "Small-Ball": "#009E73"}
 ERAS = list(ERA_COLORS)
 NEG, POS = "#B2182B", "#2166AC"
@@ -31,16 +21,14 @@ plt.rcParams.update({
     "axes.titleweight": "bold", "axes.titlesize": 11, "figure.dpi": 150,
 })
 
-
 def save(fig, name):
     fig.tight_layout()
     fig.savefig(OUT / name, bbox_inches="tight")
     plt.close(fig)
     print(f"  {OUT / name}")
 
-
 def fig_winner_vs_statistical_choice():
-    """Insight 1: dal 2011-12 il voto non va piu' contro le statistiche."""
+
     vm = INSIGHTS["vote_model"]
     seasons = vm["seasons"]
     x = list(range(len(seasons)))
@@ -70,9 +58,8 @@ def fig_winner_vs_statistical_choice():
     ax.legend(loc="upper left", fontsize=7.5, frameon=False)
     save(fig, "fig1_mvp_vs_scelta_statistica.png")
 
-
 def fig_vote_weights_by_era():
-    """Insight 2: cresce il peso del merito individuale, non quello del record."""
+
     by_era = INSIGHTS["vote_model"]["by_era"]
     fig, axes = plt.subplots(1, 2, figsize=(8, 3.2), sharey=True)
     for ax, feat, title in zip(axes, ["PIE", "Team_W_PCT"],
@@ -91,9 +78,8 @@ def fig_vote_weights_by_era():
                  f"+{d['mean']:.3f} [{d['ci95'][0]:.3f}; {d['ci95'][1]:.3f}]", fontsize=9)
     save(fig, "fig2_pesi_voto_per_era.png")
 
-
 def fig_threshold():
-    """Insight 3: sotto il 55% di vittorie il merito individuale non basta."""
+
     wt = INSIGHTS["win_rate_threshold"]
     keys = ["under_55", "band_55_65", "over_65"]
     bands = [wt["bands"][k] for k in keys]
@@ -108,9 +94,8 @@ def fig_threshold():
     ax.set_title(f"Candidati top-5 su PIE (n={wt['n_serious_candidates']}): quando il voto crolla")
     save(fig, "fig3_soglia_record_squadra.png")
 
-
 def fig_incumbents():
-    """Insight 4: l'MVP uscente riceve in media un bonus, non una penalità."""
+
     vf = INSIGHTS["voter_fatigue"]
     cases = vf["incumbent_cases"]
     fig, ax = plt.subplots(figsize=(6.5, 5.2))
@@ -124,9 +109,8 @@ def fig_incumbents():
                  f"(altri {vf['mean_residual_others']:+.3f})", fontsize=10)
     save(fig, "fig4_mvp_uscenti.png")
 
-
 def fig_reliability():
-    """Contesto: quale singola statistica avrebbe indicato il vincitore."""
+
     rel = INSIGHTS["top1_reliability"]["by_era"]
     metrics = ["PIE", "WS", "Team_W_PCT", "PTS"]
     fig, ax = plt.subplots(figsize=(6.5, 3))
@@ -141,10 +125,8 @@ def fig_reliability():
     ax.set_title("Affidabilità delle singole statistiche come predittore dell'MVP")
     save(fig, "fig5_affidabilita_metriche.png")
 
-
 def fig_pca_shifts():
-    """Insight 6: negli MVP controcorrente il voto si sposta da un lungo
-    (destra) a una guardia (sinistra) nello spazio della PCA."""
+
     with open(ROOT / "data" / "mvp_candidates_pca.csv", newline="") as f:
         rows = list(csv.DictReader(f))
     meta = json.loads((ROOT / "data" / "pca_meta.json").read_text())
@@ -180,9 +162,8 @@ def fig_pca_shifts():
     ax.legend(fontsize=7.5, frameon=False, loc="lower right")
     save(fig, "fig6_pca_spostamento_guardie.png")
 
-
 def fig_robustness():
-    """Robustezza: scarto vincitore-scelta statistica con PIE e con WS."""
+
     rb = INSIGHTS["robustness_ws"]
     seasons = rb["seasons"]
     x = range(len(seasons))
@@ -199,7 +180,6 @@ def fig_robustness():
                  f"{g['pie']['from_2011']:.3f}, WS {g['ws']['until_2010']:.3f} → {g['ws']['from_2011']:.3f}", fontsize=9.5)
     ax.legend(fontsize=8, frameon=False, loc="upper right")
     save(fig, "fig7_robustezza_pie_ws.png")
-
 
 if __name__ == "__main__":
     print("Figure generate:")

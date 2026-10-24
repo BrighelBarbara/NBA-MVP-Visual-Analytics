@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NBA MVP Visual Analytics Explorer (1996 - 2023)</title>
-    <!-- Importazione D3.js v7 -->
+
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -15,7 +15,7 @@
     </header>
 
     <div class="dashboard-grid">
-        <!-- (A) Scatterplot PCA -->
+
         <section class="card" id="pca-card">
             <h2>Spatial PCA Projection (PC1 vs PC2)</h2>
             <p class="card-desc">Brush per selezionare · click su un punto per il dettaglio · click su un'era per filtrarla.</p>
@@ -23,14 +23,12 @@
             <div id="pca-plot" class="chart"></div>
         </section>
 
-        <!-- (C) Parallel Coordinates Plot -->
         <section class="card" id="pcp-card">
             <h2>Parallel Coordinates Plot: merito vs voto</h2>
             <p class="card-desc">Ultimo tratto: voto atteso dalle statistiche → voto reale. <span class="pos">Blu</span> = più voti del previsto, <span class="neg">rosso</span> = meno.</p>
             <div id="pcp-plot" class="chart"></div>
         </section>
 
-        <!-- (E) Sidebar -->
         <aside class="card" id="sidebar-card">
             <h2>Analytics</h2>
             <div id="selected-player-info" class="info-box">
@@ -50,14 +48,12 @@
             <a id="reset-all-filters" class="reset-link" href="#" style="display:none">↺ azzera tutti i filtri</a>
         </aside>
 
-        <!-- (B) Line Chart -->
         <section class="card" id="line-card">
             <h2 id="linechart-title">Share attesa: MVP reale vs scelta statistica</h2>
             <p class="card-desc" id="linechart-desc">Trascina sulla timeline per la tendenza del periodo · click su un'etichetta del PCP per cambiare statistica.</p>
             <div id="line-chart" class="chart"></div>
         </section>
 
-        <!-- (D) Box Plot -->
         <section class="card" id="boxplot-card">
             <h2 id="boxplot-title">PIE per era · come vota ogni era</h2>
             <p class="card-desc" id="boxplot-desc"></p>

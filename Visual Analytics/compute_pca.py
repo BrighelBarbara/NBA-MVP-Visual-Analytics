@@ -8,23 +8,14 @@ from sklearn.preprocessing import StandardScaler
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 
-
 def compute_mvp_pca(
     input_cleaned_file=HERE / "mvp_candidates_cleaned.csv",
     output_pca_file=ROOT / "data" / "mvp_candidates_pca.csv",
     output_meta_file=ROOT / "data" / "pca_meta.json",
 ):
-    # 1. Caricamento del dataset pulito
+
     df = pd.read_csv(input_cleaned_file)
 
-    # 2. Selezione delle feature numeriche per la PCA.
-    # Escluse di proposito:
-    #  - le colonne del voto MVP (Share, Rank, PtsWon...): altrimenti la PCA
-    #    "ricostruirebbe" il voto invece di descrivere il merito statistico;
-    #  - Team_W_PCT: e' contesto di squadra, non merito individuale. La
-    #    domanda del progetto e' proprio separare le due cose, quindi il
-    #    record di squadra resta visibile come asse del PCP, non dentro la PCA;
-    #  - WS/WS48: mancanti per 50 candidati Pre-Analytics.
     features_pca = [
         "GP",
         "MIN",
@@ -54,25 +45,18 @@ def compute_mvp_pca(
 
     X = df[features_pca].values
 
-    # 3. Standardizzazione Z-Score
     scaler = StandardScaler()
     X_std = scaler.fit_transform(X)
 
-    # 4. PCA su 2 Componenti Principali
     pca = PCA(n_components=2)
     X_pca = pca.fit_transform(X_std)
 
-    # Il segno di una componente principale e' arbitrario: lo fissiamo cosi'
-    # che le etichette degli assi nella dashboard restino sempre valide
-    # (PC1 positivo = profilo da lungo/rimbalzista, PC2 positivo = volume
-    # offensivo/impatto).
     loadings = pd.DataFrame(pca.components_.T, index=features_pca, columns=["PC1", "PC2"])
     for pc, anchor in (("PC1", "REB"), ("PC2", "PTS")):
         if loadings.loc[anchor, pc] < 0:
             loadings[pc] *= -1
             X_pca[:, int(pc[-1]) - 1] *= -1
 
-    # 5. Varianza Spiegata
     var_pc1 = pca.explained_variance_ratio_[0]
     var_pc2 = pca.explained_variance_ratio_[1]
 
@@ -84,12 +68,9 @@ def compute_mvp_pca(
         f"({(var_pc1 + var_pc2)*100:.2f}%)"
     )
 
-    # 6. Aggiunta delle coordinate PC1 e PC2
     df["PC1"] = X_pca[:, 0]
     df["PC2"] = X_pca[:, 1]
 
-    # 7. Salvataggio del dataset e dei metadati (varianza + loadings), letti
-    # dalla dashboard per le etichette degli assi della scatterplot.
     df.to_csv(output_pca_file, index=False)
 
     meta = {
@@ -105,7 +86,6 @@ def compute_mvp_pca(
 
     print(f"Dataset PCA salvato in: '{output_pca_file}'")
     print(f"Metadati PCA salvati in: '{output_meta_file}'")
-
 
 if __name__ == "__main__":
     compute_mvp_pca()

@@ -5,10 +5,6 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Dashboard a schermo intero: tutte le viste stanno in una schermata (niente
-   scroll). Sotto i 760px di altezza la griglia mantiene una dimensione
-   minima leggibile e la pagina scorre: unico caso in cui lo scroll e'
-   giustificato da un vincolo di spazio. */
 html, body {
     height: 100%;
 }
@@ -83,8 +79,6 @@ body {
     line-height: 1.3;
 }
 
-/* Contenitore dei grafici: occupa lo spazio residuo della card, gli SVG ne
-   leggono le dimensioni al render */
 .chart {
     flex: 1;
     min-height: 0;
@@ -107,7 +101,6 @@ svg text {
     font-size: 10px;
 }
 
-/* --- Scatterplot PCA --- */
 .point {
     transition: opacity 0.2s ease;
     cursor: pointer;
@@ -123,7 +116,6 @@ svg text {
     opacity: 1 !important;
 }
 
-/* Dopo .point.hovered: a parità di specificità vince l'evidenziazione della selezione */
 .point.selected-highlight {
     stroke: #b2182b !important;
     stroke-width: 3px !important;
@@ -173,7 +165,6 @@ svg text {
     stroke-dasharray: 2,2;
 }
 
-/* --- Parallel Coordinates --- */
 .polyline {
     fill: none;
     stroke-width: 1px;
@@ -231,7 +222,6 @@ svg text {
     stroke-dasharray: 4;
 }
 
-/* --- Line Chart --- */
 .series-winner {
     fill: none;
     stroke: #1a252f;
@@ -279,7 +269,6 @@ svg text {
     stroke-width: 3px;
 }
 
-/* --- Box Plot --- */
 .era-box {
     cursor: pointer;
 }
@@ -297,7 +286,6 @@ svg text {
     cursor: pointer;
 }
 
-/* --- Legenda --- */
 .legend {
     display: flex;
     flex-wrap: wrap;
@@ -338,7 +326,6 @@ svg text {
     flex-shrink: 0;
 }
 
-/* --- Sidebar --- */
 .info-box {
     background: #ecf0f1;
     padding: 7px 9px;
@@ -483,7 +470,6 @@ svg text {
     fill: #6a3d9a;
 }
 
-/* --- Evidenza del modello del voto nei grafici --- */
 .narr-ring {
     fill: none;
     stroke-width: 1.6px;
@@ -605,24 +591,12 @@ g.narrative-row:hover .row-hit { fill: #ecf0f1; }
 }
 
 .shift-layer { pointer-events: none; }
-.shift-arrow {
-    stroke: #B2182B;
-    stroke-width: 1.8px;
-    opacity: 0.85;
-}
-.shift-origin {
-    fill: #fff;
-    stroke: #1a252f;
-    stroke-width: 1.5px;
-}
 .pc1-zero {
     stroke: #95a5a6;
     stroke-width: 1px;
     stroke-dasharray: 2,3;
 }
-.shift-layer .dimmed { opacity: 0.08; }
 
-/* --- Vista espansa (modale) --- */
 .card {
     position: relative;
 }

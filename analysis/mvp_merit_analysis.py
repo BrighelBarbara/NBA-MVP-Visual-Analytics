@@ -1,33 +1,3 @@
-"""
-Analisi riproducibile: "Chi vince l'MVP se lo merita davvero?"
-
-Legge il dataset canonico usato dalla dashboard (data/mvp_candidates_pca.csv,
-354 candidati su 27 stagioni, 1996-97 - 2022-23) e risponde a tre domande:
-
-  1. Affidabilita' per metrica: quanto spesso il vincitore reale dell'MVP era
-     anche il candidato #1 di quella stagione su una data statistica (overall
-     e per era tattica)?
-  2. Merit mismatch: quale vincitore si e' discostato di piu' dal merito
-     statistico puro (rank peggiore su PIE + WS tra i candidati)?
-  3. Voter fatigue vs incumbent bonus: controllando per PIE e Team_W_PCT, chi
-     ha vinto l'MVP l'anno precedente riceve in media un voto piu' alto o piu'
-     basso di quanto il modello si aspetterebbe?
-  4. Effetto-soglia sul record di squadra: isolando i candidati che erano gia'
-     statisticamente da MVP (rank <=5 su PIE nella loro stagione), a quale
-     Team_W_PCT il voto crolla quasi certamente? Test quantitativo su tutto
-     il dataset (135 candidati), non solo sui 4 casi aneddotici citati nelle
-     note originali (Garnett, Nowitzki, Nash, Curry).
-
-Include anche due casi aneddotici citati nel report (crollo di squadra vs
-arrivo di un secondo protagonista offensivo), con un limite noto: il dataset
-contiene solo i candidati che hanno ricevuto voti MVP quell'anno, non l'intero
-roster di squadra (vedi funzione narrative_cases).
-
-Output: data/insights/insights.json, consumato da js/app.js per il modulo
-interattivo "Insights" della dashboard.
-
-Uso: python3 analysis/mvp_merit_analysis.py
-"""
 import csv
 import json
 from collections import defaultdict
@@ -44,23 +14,19 @@ OUTPUT_PATH = ROOT / "data" / "insights" / "insights.json"
 METRICS = ["PIE", "WS", "Team_W_PCT", "PTS", "Net_Rating", "USG_PCT"]
 ERAS = ["Pre-Analytics", "Transition", "Small-Ball"]
 
-
 def to_f(v):
     try:
         f = float(v)
     except (TypeError, ValueError):
         return None
-    return f if f == f else None  # scarta NaN
-
+    return f if f == f else None
 
 def load_rows():
     with open(DATA_PATH, newline="") as f:
         return list(csv.DictReader(f))
 
-
 def top1_reliability(rows):
-    """Per ogni metrica: % di stagioni in cui il vincitore reale era anche
-    il candidato con il valore piu' alto quell'anno."""
+
     by_season = defaultdict(list)
     for r in rows:
         by_season[r["Season"]].append(r)
@@ -98,11 +64,8 @@ def top1_reliability(rows):
 
     return {"overall": pct(overall), "by_era": {e: pct(d) for e, d in by_era.items()}}
 
-
 def merit_mismatch(rows):
-    """Rank del vincitore reale tra i candidati di quella stagione, su PIE,
-    WS e Team_W_PCT. Un rank alto su PIE/WS (nonostante il titolo) segnala un
-    premio guidato piu' da contesto/narrativa che da dominio statistico."""
+
     by_season = defaultdict(list)
     for r in rows:
         by_season[r["Season"]].append(r)
@@ -134,12 +97,8 @@ def merit_mismatch(rows):
     cases.sort(key=merit_gap, reverse=True)
     return cases
 
-
 def voter_fatigue(rows):
-    """Modello Share ~ PIE + Team_W_PCT. Per chi ha vinto l'MVP l'anno prima,
-    il residuo dell'anno successivo dice se il voto e' stato piu' generoso
-    (bonus di fiducia) o piu' severo (voter fatigue) di quanto le statistiche
-    da sole giustifichino."""
+
     seasons_sorted = sorted({r["Season"] for r in rows})
     season_idx = {s: i for i, s in enumerate(seasons_sorted)}
     winners_by_season = {r["Season"]: r["Player"] for r in rows if r["Is_MVP_Winner"] == "1"}
@@ -189,17 +148,10 @@ def voter_fatigue(rows):
         "incumbent_cases": incumbents,
     }
 
-
 SCORE_METRICS = ["Team_W_PCT", "WS", "PIE", "PTS", "TS_PCT"]
 
-
 def mvp_score_weights(rows):
-    """Pesi dell'MVP Score dinamico della dashboard, stimati dai dati invece
-    che scelti a mano: Ridge su feature standardizzate, target MVP_Share.
-    Coefficienti vincolati >= 0 (positive=True): senza vincolo TS_PCT prende
-    un peso negativo solo per collinearita' con PIE, che renderebbe lo score
-    poco interpretabile ("tirare meglio abbassa il punteggio"). I pesi sono
-    poi normalizzati a somma 1. Righe senza WS (50, Pre-Analytics) escluse."""
+
     data = []
     for r in rows:
         vals = [to_f(r[m]) for m in SCORE_METRICS]
@@ -220,24 +172,10 @@ def mvp_score_weights(rows):
         "weights": {m: round(float(c) / total, 3) for m, c in zip(SCORE_METRICS, model.coef_)},
     }
 
-
 VOTE_FEATURES = ["PIE", "Team_W_PCT"]
 
-
 def vote_model(rows, n_boot=2000, seed=0):
-    """Modello del voto: MVP_Share ~ z(PIE) + z(Team_W_PCT), regressione
-    lineare. E' lo STESSO modello che la dashboard ristima in tempo reale
-    sulla selezione (js/app.js -> fitVoteModel): z-score calcolati sull'intero
-    dataset, cosi' i coefficienti di selezioni diverse sono confrontabili.
 
-    - share attesa = quanto voto "meriterebbe" un candidato dati merito
-      individuale (PIE) e contesto di squadra (Team_W_PCT);
-    - narrativa = share reale - share attesa (proxy dichiarato: non ci sono
-      dati sui media, e' la parte di voto che le statistiche non spiegano);
-    - scelta statistica = candidato con la share attesa piu' alta della
-      stagione; dove non coincide col vincitore reale, il voto e' andato
-      "contro" le statistiche.
-    Per era: coefficienti con intervallo bootstrap al 95%."""
     pts = [(r, to_f(r["PIE"]), to_f(r["Team_W_PCT"]), to_f(r["MVP_Share"])) for r in rows]
     pts = [p for p in pts if None not in p[1:]]
     X_raw = np.array([[p[1], p[2]] for p in pts])
@@ -270,7 +208,6 @@ def vote_model(rows, n_boot=2000, seed=0):
         }
     diff = boot["Small-Ball"][:, 0] - boot["Pre-Analytics"][:, 0]
 
-    # Scelta statistica vs vincitore reale, stagione per stagione
     by_season = defaultdict(list)
     for (r, *_), e in zip(pts, expected):
         by_season[r["Season"]].append((r, float(e)))
@@ -295,8 +232,6 @@ def vote_model(rows, n_boot=2000, seed=0):
     mismatches = [s for s in seasons if not s["matches"]]
     big = [s for s in mismatches if s["merit_gap"] >= 0.15]
 
-    # Serie piu' lunga di stagioni consecutive (fino all'ultima) senza
-    # "MVP controcorrente" (scarto >= 0.15)
     streak = 0
     for s in reversed(seasons):
         if s["merit_gap"] >= 0.15:
@@ -324,10 +259,8 @@ def vote_model(rows, n_boot=2000, seed=0):
         "seasons_since_last_big_mismatch": streak,
     }
 
-
 def _fit_vote(rows, merit_col):
-    """Stesso modello di vote_model, con un indicatore di merito a scelta:
-    Share ~ z(merit) + z(Team_W_PCT). Restituisce share attesa per riga e R²."""
+
     pts = [(r, to_f(r[merit_col]), to_f(r["Team_W_PCT"]), to_f(r["MVP_Share"])) for r in rows]
     pts = [p for p in pts if None not in p[1:]]
     X = np.array([[p[1], p[2]] for p in pts])
@@ -336,13 +269,8 @@ def _fit_vote(rows, merit_col):
     m = LinearRegression().fit(Z, y)
     return [p[0] for p in pts], m.predict(Z), y, float(m.score(Z, y))
 
-
 def position_effect(rows, vote):
-    """Insight guardie vs lunghi. PC1 della PCA separa i profili da guardia
-    (PC1 < 0: assist, tiro da 3, contropiede) da quelli da lungo (PC1 > 0:
-    rimbalzi, stoppate). Si confronta la narrativa (share reale - attesa)
-    dei due gruppi, in totale e per era, e la posizione su PC1 di MVP reale e
-    scelta statistica negli MVP controcorrente."""
+
     from scipy import stats
 
     rows_m, expected, y, _ = _fit_vote(rows, "PIE")
@@ -391,13 +319,8 @@ def position_effect(rows, vote):
         "winners_by_era": winners_by_era,
     }
 
-
 def robustness_ws(rows, vote):
-    """Controllo di robustezza: stesso modello con WS (Win Shares) al posto di
-    PIE come misura del merito individuale. WS manca per le stagioni
-    1996-97 - 2000-01, quindi il confronto e' sulle stagioni in cui tutti i
-    candidati hanno WS. Per ogni stagione si confronta la scelta statistica
-    dei due modelli e si verifica se gli MVP controcorrente restano gli stessi."""
+
     complete = {}
     for r in rows:
         complete.setdefault(r["Season"], True)
@@ -427,8 +350,7 @@ def robustness_ws(rows, vote):
             "gap_pie": pie["merit_gap"],
             "same_choice": choice_r["Player"] == pie["statistical_choice"],
         })
-    # Pesi per era con WS (z-score su tutte le righe con WS), per verificare
-    # l'Insight 2 con una misura di merito diversa
+
     rows_ws = [r for r in rows if to_f(r["WS"]) is not None]
     X = np.array([[to_f(r["WS"]), to_f(r["Team_W_PCT"])] for r in rows_ws])
     Z = (X - X.mean(axis=0)) / X.std(axis=0, ddof=1)
@@ -464,24 +386,8 @@ def robustness_ws(rows, vote):
         "seasons": out,
     }
 
-
 def narrative_cases(rows):
-    """Due casi aneddotici citati nel report:
-    - crollo del record di squadra a parita' di merito individuale (Garnett,
-      Nowitzki, e per contrasto Nash, Curry);
-    - arrivo di un secondo protagonista offensivo, misurato come collasso del
-      divario di USG_PCT tra il vincitore e il candidato successivo della
-      stessa squadra (Curry/Durant).
 
-    LIMITE NOTO: il dataset contiene solo i candidati che hanno ricevuto voti
-    MVP quell'anno, non l'intero roster. Il metodo dell'usage-gap funziona
-    solo quando anche il "secondo protagonista" ha ricevuto voti MVP (vero
-    per Durant nel 2016-17). Il caso Westbrook/Paul George (OKC 2017-18) NON
-    e' verificabile con questo dataset perche' George non fu candidato MVP
-    quell'anno: senza il suo USG_PCT il calcolo del gap sarebbe fuorviante,
-    quindi va escluso finche' non si integrano i dati di roster completo
-    (disponibili grezzi in data1/raw/nba_stats_repo, non ancora uniti).
-    """
     by_player_season = {(r["Player"], r["Season"]): r for r in rows}
     by_season = defaultdict(list)
     for r in rows:
@@ -543,20 +449,8 @@ def narrative_cases(rows):
         },
     }
 
-
 def win_rate_threshold_effect(rows):
-    """A quale Team_W_PCT il voto MVP crolla quasi certamente, ISOLANDO
-    l'effetto dal merito individuale? Filtra ai soli candidati che erano gia'
-    statisticamente forti (rank <=5 su PIE nella propria stagione: 135 su
-    354), cosi' un voto basso non si spiega con "non era abbastanza bravo".
 
-    Le note originali (4 casi aneddotici: Garnett, Nowitzki, Nash, Curry)
-    ipotizzavano una soglia critica al 60-65% di vittorie. Verificato qui su
-    tutto il campione: la soglia reale e' piu' vicina al 55% — sotto quella
-    linea l'89% dei candidati statisticamente forti ha il voto azzerato
-    (Share<0.10); tra 55-65% scende al 32%; sopra 65% al 18%. Il 60-65%
-    originale non era sbagliato (rientra nella "zona di rischio" 50-65%), ma
-    il salto piu' netto avviene prima, verso il 55%."""
     by_season = defaultdict(list)
     for r in rows:
         by_season[r["Season"]].append(r)
@@ -606,7 +500,6 @@ def win_rate_threshold_effect(rows):
         "bands": bands,
         "fine_bins": fine_bins,
     }
-
 
 def main():
     rows = load_rows()
@@ -670,7 +563,6 @@ def main():
           f"<55% -> {wt['bands']['under_55']['collapse_rate_pct']}% crollati | "
           f"55-65% -> {wt['bands']['band_55_65']['collapse_rate_pct']}% | "
           f">=65% -> {wt['bands']['over_65']['collapse_rate_pct']}%")
-
 
 if __name__ == "__main__":
     main()

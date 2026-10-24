@@ -1,19 +1,3 @@
-"""
-build_dataset.py
------------------
-Unisce:
-  1) Le statistiche giocatori dal repo GitHub (Brescou/NBA-dataset-stats-player-team)
-  2) I voti MVP raccolti da Basketball-Reference (data/raw/mvp_voting.csv)
-
-Applica i filtri della proposal (MIN >= 20, GP >= 41), aggiunge la colonna
-dell'era tattica e verifica l'AS Index (#righe * #colonne, atteso 10.000-50.000).
-
-Uso:
-    python build_dataset.py
-Output:
-    data/processed/mvp_candidates_final.csv
-"""
-
 import pandas as pd
 from unidecode import unidecode
 from pathlib import Path
@@ -23,16 +7,14 @@ STATS_REPO = RAW / "nba_stats_repo" / "player"
 OUT_DIR = Path(__file__).resolve().parents[1] / "processed"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-
 def norm_name(name: str) -> str:
-    """Normalizza i nomi giocatore per il join (rimuove accenti, spazi doppi, minuscolo)."""
+
     if pd.isna(name):
         return name
     return unidecode(str(name)).strip().lower()
 
-
 def load_mvp_voting() -> pd.DataFrame:
-    """Carica e concatena tutti i file di voto MVP raccolti (mvp_voting*.csv)."""
+
     files = list(RAW.glob("mvp_voting*.csv"))
     if not files:
         raise FileNotFoundError(
@@ -45,7 +27,6 @@ def load_mvp_voting() -> pd.DataFrame:
     mvp["is_mvp_winner"] = (mvp["Rank"] == "1").astype(int)
     return mvp
 
-
 TRADITIONAL_COLS = [
     "PLAYER_ID", "PLAYER_NAME", "TEAM_ABBREVIATION", "AGE", "SEASON",
     "GP", "MIN", "PTS", "REB", "AST", "STL", "BLK", "TOV",
@@ -55,15 +36,8 @@ ADV_COLS = ["PLAYER_ID", "SEASON", "TS_PCT", "USG_PCT", "PIE", "OFF_RATING", "DE
 USAGE_COLS = ["PLAYER_ID", "SEASON", "PCT_PTS", "PCT_AST", "PCT_REB"]
 MISC_COLS = ["PLAYER_ID", "SEASON", "PTS_PAINT", "PTS_FB", "PTS_OFF_TOV"]
 
-
 def load_player_stats() -> pd.DataFrame:
-    """Carica e unisce le statistiche regular-season (traditional + advanced + usage + misc).
 
-    Tiene solo le colonne rilevanti (niente colonne _RANK) per restare vicini
-    all'AS Index dichiarato nella proposal (~22 colonne).
-    Un giocatore scambiato a meta' stagione ha piu' righe (una per squadra + una
-    riga 'TOT'): teniamo solo quella con piu' minuti per evitare duplicati.
-    """
     trad = pd.read_csv(STATS_REPO / "player_stats_traditionnal_rs.csv")[TRADITIONAL_COLS]
     adv = pd.read_csv(STATS_REPO / "player_stats_advanced_rs.csv")[ADV_COLS]
     usage = pd.read_csv(STATS_REPO / "player_stats_usage_rs.csv")[USAGE_COLS]
@@ -81,7 +55,6 @@ def load_player_stats() -> pd.DataFrame:
     merged["player_key"] = merged["PLAYER_NAME"].apply(norm_name)
     return merged
 
-
 def assign_era(season: str) -> str:
     start_year = int(season.split("-")[0])
     if start_year <= 2004:
@@ -90,7 +63,6 @@ def assign_era(season: str) -> str:
         return "Transition"
     else:
         return "Small-Ball"
-
 
 def main():
     mvp = load_mvp_voting()
@@ -112,15 +84,10 @@ def main():
 
     merged = merged[merged["PLAYER_ID"].notna()].copy()
 
-    # PTS/AST/STL/BLK esistono in entrambe le fonti (voto MVP e stats), quindi
-    # il merge le ha suffissate _mvp/_stats. Teniamo solo la versione _stats
-    # (nba_stats_repo), piu' completa e affidabile della colonna raccolta da
-    # Basketball-Reference, che e' vuota per molte stagioni piu' vecchie.
     DUPLICATED_STATS = ["PTS", "AST", "STL", "BLK"]
     merged = merged.drop(columns=[f"{c}_mvp" for c in DUPLICATED_STATS])
     merged = merged.rename(columns={f"{c}_stats": c for c in DUPLICATED_STATS})
 
-    # Filtro dalla proposal: MIN >= 20, GP >= 41
     merged["MIN"] = pd.to_numeric(merged["MIN"], errors="coerce")
     merged["GP"] = pd.to_numeric(merged["GP"], errors="coerce")
     filtered = merged[(merged["MIN"] >= 20) & (merged["GP"] >= 41)].copy()
@@ -140,7 +107,6 @@ def main():
               "o rivedere il filtro.")
     else:
         print("   ✔️  Dentro il range richiesto dal regolamento (10.000-50.000).")
-
 
 if __name__ == "__main__":
     main()

@@ -5,17 +5,14 @@ import pandas as pd
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 
-
 def clean_mvp_dataset(input_path: str, output_path: str):
-  # 1. Carica il dataset grezzo originale
+
   df = pd.read_csv(input_path)
 
-  # 2. Pulisci la colonna Rank (es. trasforma '16T' con pareggio nel numero intero 16)
   df['MVP_Rank'] = df['Rank'].astype(str).str.replace('T', '').astype(int)
 
-  # 3. Definizione della mappatura: seleziona le colonne ufficiali (NBA API) ed elimina i duplicati
   columns_mapping = {
-      # --- Anagrafica, Identificativi e Contesto ---
+
       'Season': 'Season',
       'PLAYER_NAME': 'Player',
       'PLAYER_ID': 'Player_ID',
@@ -23,13 +20,13 @@ def clean_mvp_dataset(input_path: str, output_path: str):
       'AGE': 'Age',
       'tactical_era': 'Tactical_Era',
       'is_mvp_winner': 'Is_MVP_Winner',
-      # --- Votazioni MVP e Consenso ---
+
       'MVP_Rank': 'MVP_Rank',
       'First': 'MVP_First_Votes',
       'PtsWon': 'MVP_Pts_Won',
       'PtsMax': 'MVP_Pts_Max',
       'Share': 'MVP_Share',
-      # --- Statistiche Box-Score Tradizionali (Fonte NBA API) ---
+
       'GP': 'GP',
       'MIN': 'MIN',
       'PTS': 'PTS',
@@ -44,7 +41,7 @@ def clean_mvp_dataset(input_path: str, output_path: str):
       'TS_PCT': 'TS_PCT',
       'WS': 'WS',
       'WS48': 'WS48',
-      # --- Analytics Avanzate e Impatto Tattico ---
+
       'W_PCT': 'Team_W_PCT',
       'PLUS_MINUS': 'Plus_Minus',
       'OFF_RATING': 'Off_Rating',
@@ -60,10 +57,8 @@ def clean_mvp_dataset(input_path: str, output_path: str):
       'PTS_OFF_TOV': 'PTS_Off_TOV',
   }
 
-  # 4. Filtra solo le colonne definite ed applica i nuovi nomi puliti
   df_clean = df[list(columns_mapping.keys())].rename(columns=columns_mapping)
 
-  # 5. Salva il file pulito finale
   df_clean.to_csv(output_path, index=False)
   print(
       f'Pulizia completata con successo!'
@@ -71,8 +66,6 @@ def clean_mvp_dataset(input_path: str, output_path: str):
       f'{df_clean.shape[1]} colonne)'
   )
 
-
-# Esecuzione
 if __name__ == '__main__':
   clean_mvp_dataset(
       ROOT / 'data1' / 'processed' / 'mvp_candidates_final.csv',
