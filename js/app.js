@@ -9,8 +9,8 @@ const ERAS = Object.keys(ERA_COLORS);
 
 // Voto reale vs atteso: estremi della divergente PuOr (viola = sopra l'atteso, arancione = sotto).
 // Le varianti chiare servono solo su sfondo scuro (tooltip).
-const RESIDUAL_COLORS = { positive: d3.schemePuOr[9][8], negative: d3.schemePuOr[9][0] };
-const RESIDUAL_COLORS_LIGHT = { positive: d3.schemePuOr[9][6], negative: d3.schemePuOr[9][2] };
+const RESIDUAL_COLORS = { positive: d3.schemePuOr[9][0], negative: d3.schemePuOr[9][8] };
+const RESIDUAL_COLORS_LIGHT = { positive: d3.schemePuOr[9][2], negative: d3.schemePuOr[9][6] };
 const SELECT_COLOR = "#000";
 // Grigi (d3.schemeGreys) solo per grandezze non categoriche: scuro = merito, chiaro = record squadra.
 const MERIT_COLOR = d3.schemeGreys[9][6];
@@ -20,8 +20,6 @@ const OTHER_BAR_COLOR = d3.schemeGreys[9][4];
 const rootStyle = document.documentElement.style;
 rootStyle.setProperty("--pos", RESIDUAL_COLORS.positive);
 rootStyle.setProperty("--neg", RESIDUAL_COLORS.negative);
-rootStyle.setProperty("--merit", MERIT_COLOR);
-rootStyle.setProperty("--team", TEAM_COLOR);
 
 const METRIC_LABELS = {
     PTS: "PTS", REB: "REB", AST: "AST", TS_PCT: "TS%", WS: "WS", PIE: "PIE",
@@ -81,6 +79,9 @@ Promise.all([
     });
 
     globalData = data;
+    shareSizeScale = d3.scaleSqrt()
+        .domain([0, d3.max(data, d => d.MVP_Share) || 1])
+        .range([2.5, 10]);
     insightsData = insights;
     pcaMeta = meta;
     leagueAverages = league.seasons;
@@ -207,7 +208,7 @@ function setupExpandableCards() {
 }
 
 const DESELECT_CARDS = ["pca-card", "pcp-card", "line-card", "boxplot-card"];
-const NO_CLEAR_TARGETS = ".brush, .polyline, .vote-seg, .axis-label, .legend, .era-box, a, button";
+const NO_CLEAR_TARGETS = ".brush, .polyline, .vote-seg, .axis-label, .legend, .era-box, .box-outlier, a, button";
 
 function clearBrushes(root) {
     root.selectAll(".brush").each(function() {
@@ -333,6 +334,7 @@ function toggleEra(era) {
 }
 
 const LEGEND_R = 4.5;
+let shareSizeScale;
 
 function renderCardLegend(target, items) {
     const legend = d3.select(target);
@@ -347,6 +349,17 @@ function renderCardLegend(target, items) {
                     .attr("data-era", era);
                 el.append("span").attr("class", "legend-swatch").style("background", ERA_COLORS[era]);
                 el.append("span").text(era);
+            });
+            return;
+        }
+        if (item.type === "sizes") {
+            legend.append("span").attr("class", "legend-heading").text(item.heading);
+            item.values.forEach(v => {
+                const r = item.scale(v);
+                const el = legend.append("div").attr("class", "legend-item");
+                el.append("svg").attr("width", 2 * r + 2).attr("height", 2 * r + 2)
+                    .append("circle").attr("cx", r + 1).attr("cy", r + 1).attr("r", r).attr("fill", "#7f8c8d");
+                el.append("span").text(item.format(v));
             });
             return;
         }
@@ -388,7 +401,7 @@ function renderLegend() {
     renderCardLegend("#pca-legend", [
         { type: "eras" },
         { type: "star", text: "MVP reale", stroke: "#000", shared: true },
-        { type: "circle", text: "Candidato (area = share voto)" },
+        { type: "sizes", heading: "Area = share voto:", values: [0.1, 0.5, 1], scale: shareSizeScale, format: fmtPct },
     ]);
     renderCardLegend("#pcp-legend", [
         { type: "eras" },
@@ -450,15 +463,11 @@ function renderPCAScatterplot(data) {
         .domain(d3.extent(data, d => d.PC2)).nice()
         .range([height, 0]);
 
-    const sizeScale = d3.scaleSqrt()
-        .domain([0, d3.max(data, d => d.MVP_Share) || 1])
-        .range([2.5, 10]);
-
     const STAR_KA = 0.89081309152928522810;
     const symbolGenerator = d3.symbol()
         .type(d => d.Is_MVP_Winner === 1 ? d3.symbolStar : d3.symbolCircle)
         .size(d => {
-            const r = sizeScale(d.MVP_Share);
+            const r = shareSizeScale(d.MVP_Share);
             return d.Is_MVP_Winner === 1 ? (r * r) / STAR_KA : Math.PI * r * r;
         });
 
@@ -951,16 +960,39 @@ function renderLineChart(data) {
     clearBrushOnClick(lineBrushG, brush);
 }
 
+// Statistiche di Tukey: i baffi arrivano all'ultimo dato entro 1,5×IQR dal box,
+// i valori oltre sono outlier.
+function boxStats(sorted) {
+    const q1 = d3.quantile(sorted, 0.25);
+    const median = d3.quantile(sorted, 0.5);
+    const q3 = d3.quantile(sorted, 0.75);
+    const iqr = q3 - q1;
+    const lo = d3.min(sorted.filter(v => v >= q1 - 1.5 * iqr));
+    const hi = d3.max(sorted.filter(v => v <= q3 + 1.5 * iqr));
+    return { q1, median, q3, lo, hi };
+}
+
+function drawOutliers(svg, rows, metric, cx, yScale, lo, hi) {
+    svg.selectAll(null)
+        .data(rows.filter(d => d[metric] < lo || d[metric] > hi))
+        .enter().append("circle")
+        .attr("class", "box-outlier")
+        .attr("cx", cx).attr("cy", d => yScale(d[metric])).attr("r", 2.8)
+        .on("click", (event, d) => { event.stopPropagation(); toggleCandidate(d); })
+        .on("mouseenter mousemove", (event, d) => showTooltip(
+            `<strong>${d.Player}</strong> (${d.Season})<br>${label(metric)} ${formatMetric(metric, d[metric])} · outlier`, event))
+        .on("mouseleave", hideTooltip);
+}
+
 function renderBoxPlot(data) {
 
     const metric = currentMetric === "Expected_Share" ? "PIE" : currentMetric;
-    d3.select("#boxplot-title").text(`${label(metric)} per era · come vota ogni era`);
-    d3.select("#boxplot-desc").html(`Sotto ogni era: <strong>peso del merito</strong> vs <strong>peso del record di squadra</strong> nel voto (ristimati sulla selezione). Click su un box per filtrare l'era.`);
+    d3.select("#boxplot-title").text(`${label(metric)} per era`);
+    d3.select("#boxplot-desc").html(`Click su un box per filtrare l'era.`);
 
     renderCardLegend("#boxplot-legend", [
         { type: "eras" },
-        { type: "rect", fill: MERIT_COLOR, text: "Peso merito (PIE)" },
-        { type: "rect", fill: TEAM_COLOR, text: "Peso record squadra" },
+        { type: "circle", fill: "#fff", stroke: "#000", text: "Outlier (oltre 1,5×IQR)" },
     ]);
 
     const container = d3.select("#boxplot-chart");
@@ -974,7 +1006,7 @@ function renderBoxPlot(data) {
         return;
     }
 
-    const margin = { top: 10, right: 15, bottom: 50, left: 57 };
+    const margin = { top: 10, right: 15, bottom: 24, left: 57 };
     const { width, height } = chartSize(container, margin);
     const svg = appendSvg(container, width, height, margin);
 
@@ -982,7 +1014,6 @@ function renderBoxPlot(data) {
     const yScale = d3.scaleLinear().domain(d3.extent(values)).nice().range([height, 0]);
 
     svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(xScale));
-    renderEraVoteModels(svg, data, xScale, height);
     svg.append("g").call(d3.axisLeft(yScale).ticks(5).tickFormat(v => formatMetric(metric, v)));
     addYAxisTitle(svg, height, margin.left, axisTitle(metric));
     if (metric === "Narrative" && yScale.domain()[0] < 0) {
@@ -995,12 +1026,7 @@ function renderBoxPlot(data) {
         const eraData = eraRows.map(d => d[metric]).sort(d3.ascending);
         if (eraData.length === 0) return;
 
-        const q1 = d3.quantile(eraData, 0.25);
-        const median = d3.quantile(eraData, 0.5);
-        const q3 = d3.quantile(eraData, 0.75);
-        const iqr = q3 - q1;
-        const min = Math.max(d3.min(eraData), q1 - 1.5 * iqr);
-        const max = Math.min(d3.max(eraData), q3 + 1.5 * iqr);
+        const { q1, median, q3, lo: min, hi: max } = boxStats(eraData);
 
         const x = xScale(era);
         const boxWidth = xScale.bandwidth();
@@ -1018,47 +1044,46 @@ function renderBoxPlot(data) {
             .attr("y1", yScale(v)).attr("y2", yScale(v)).attr("stroke", "#000"));
         g.append("rect").attr("x", x).attr("y", yScale(q3)).attr("height", Math.max(1, yScale(q1) - yScale(q3))).attr("width", boxWidth).attr("fill", ERA_COLORS[era]).attr("opacity", 0.7).attr("stroke", "#000");
         g.append("line").attr("x1", x).attr("x2", x + boxWidth).attr("y1", yScale(median)).attr("y2", yScale(median)).attr("stroke", "#000").attr("stroke-width", 2);
+        drawOutliers(svg, eraRows, metric, x + boxWidth / 2, yScale, min, max);
     });
 }
 
 const COEF_SCALE_MAX = 0.3;
-function renderEraVoteModels(svg, data, xScale, height) {
-    const barMax = xScale.step() * 0.62;
-    const coef = d3.scaleLinear().domain([0, COEF_SCALE_MAX]).range([0, barMax]).clamp(true);
-    const y0 = height + 24;
 
-    ERAS.forEach(era => {
-        const x0 = xScale(era) + xScale.bandwidth() / 2 - barMax / 2;
-        const g = svg.append("g").attr("class", "era-model");
-        const model = fitVoteModel(data.filter(d => d.Tactical_Era === era));
-        g.append("rect").attr("class", "era-model-track").attr("x", x0).attr("y", y0).attr("width", barMax).attr("height", 9);
-        g.append("rect").attr("class", "era-model-track").attr("x", x0).attr("y", y0 + 12).attr("width", barMax).attr("height", 9);
-        if (!model) return;
-        g.append("rect").attr("class", "era-model-pie").attr("x", x0).attr("y", y0)
-            .attr("height", 9).attr("width", coef(Math.max(0, model.bPIE))).attr("rx", 1);
-        g.append("rect").attr("class", "era-model-team").attr("x", x0).attr("y", y0 + 12)
-            .attr("height", 9).attr("width", coef(Math.max(0, model.bW))).attr("rx", 1);
-        g.append("title").text(`${era} (n=${model.n}): peso merito ${model.bPIE.toFixed(3)} · peso squadra ${model.bW.toFixed(3)} · R² ${fmtPct(Math.max(0, model.r2))}`);
-    });
-
+// Barra su una scala [0, max]: un valore fuori scala non viene tagliato in silenzio
+// ma segnalato con "<0" (negativo) o "›" (oltre il massimo). Ritorna true se fuori scala.
+function boundedBar(g, x0, y, h, value, scale) {
+    const [d0, d1] = scale.domain();
+    const bar = g.append("rect").attr("x", x0).attr("y", y).attr("height", h).attr("rx", 1.5)
+        .attr("width", scale(Math.min(Math.max(value, d0), d1)) - scale(d0));
+    const out = value < d0 || value > d1;
+    if (out) {
+        g.append("text").attr("class", "out-of-scale")
+            .attr("x", value < d0 ? x0 + 2 : x0 + scale(d1) - scale(d0) - 2).attr("y", y + h - 1)
+            .attr("text-anchor", value < d0 ? "start" : "end")
+            .text(value < d0 ? "<0" : "›");
+    }
+    return { bar, out };
 }
 
 function compareBars(panel, rows, faded) {
     const w = panel.node().getBoundingClientRect().width || 260;
     const labelW = 96, barW = w - labelW - 6, rowH = 15;
     const svg = panel.append("svg").attr("width", w).attr("height", rows.length * rowH + 2);
+    let anyOut = false;
     rows.forEach((r, i) => {
         const x = d3.scaleLinear().domain([0, r.max]).range([0, barW]).clamp(true);
         const g = svg.append("g").attr("transform", `translate(0,${i * rowH})`);
         g.append("text").attr("class", "model-label").attr("x", 0).attr("y", 10).text(r.name);
         g.append("rect").attr("class", "bar-track").attr("x", labelW).attr("y", 3).attr("width", barW).attr("height", 9).attr("rx", 1.5);
-        g.append("rect").attr("x", labelW).attr("y", 3)
-            .attr("width", x(Math.max(0, r.sel))).attr("height", 9).attr("rx", 1.5)
-            .attr("fill", r.color || "#1a252f").attr("opacity", faded ? 0.45 : 1);
+        const { bar, out } = boundedBar(g, labelW, 3, 9, r.sel, x);
+        bar.attr("fill", r.color || "#1a252f").attr("opacity", faded ? 0.45 : 1);
+        anyOut = anyOut || out;
         g.append("line").attr("class", "model-ref")
             .attr("x1", labelW + x(r.all)).attr("x2", labelW + x(r.all)).attr("y1", 0).attr("y2", 15);
         g.append("title").text(`${r.name}: selezione ${r.fmt(r.sel)} · tutti ${r.fmt(r.all)}`);
     });
+    return anyOut;
 }
 
 function renderModelPanel(selected, isFiltered) {
@@ -1076,14 +1101,15 @@ function renderModelPanel(selected, isFiltered) {
     }
     const collapse = rows => rows.filter(d => d.MVP_Share < 0.10).length / rows.length;
     const coefFmt = v => v.toFixed(3);
-    compareBars(panel, [
+    const anyOut = compareBars(panel, [
         { name: "Peso merito (PIE)", sel: model.bPIE, all: all.bPIE, max: COEF_SCALE_MAX, fmt: coefFmt, color: MERIT_COLOR },
         { name: "Peso squadra (W%)", sel: model.bW, all: all.bW, max: COEF_SCALE_MAX, fmt: coefFmt, color: TEAM_COLOR },
         { name: "R² statistiche", sel: model.r2, all: all.r2, max: 1, fmt: fmtPct, color: OTHER_BAR_COLOR },
         { name: "Voto ≈ 0 (<10%)", sel: collapse(selected), all: collapse(globalData), max: 1, fmt: fmtPct, color: OTHER_BAR_COLOR },
     ], model.n < 25);
     panel.append("p").attr("class", "legend-note")
-        .html(`barra = selezione · <b>|</b> = tutti i candidati${model.n < 25 ? " · barre chiare = campione piccolo" : ""}`);
+        .html(`barra = selezione · <b>|</b> = tutti i candidati${model.n < 25 ? " · barre chiare = campione piccolo" : ""}` +
+            `${anyOut ? " · <b>&lt;0</b> = peso negativo · <b>›</b> = oltre la scala" : ""}`);
 }
 
 function narrativeExtremes(selected) {
@@ -1327,6 +1353,7 @@ function renderPlayerVsWinnersBoxPlot(player) {
     renderCardLegend("#boxplot-legend", [
         { type: "rect", fill: ERA_COLORS[era] || "#ccc", opacity: 0.6, stroke: "#000", text: `Vincitori MVP ${era} (box)` },
         { type: "line", color: SELECT_COLOR, width: 1.5, dash: "4,3", text: player.Player },
+        { type: "circle", fill: "#fff", stroke: "#000", text: "Outlier (oltre 1,5×IQR)" },
     ]);
 
     const container = d3.select("#boxplot-chart");
@@ -1346,12 +1373,7 @@ function renderPlayerVsWinnersBoxPlot(player) {
     addYAxisTitle(svg, height, margin.left, axisTitle(metric));
 
     if (winnerVals.length > 0) {
-        const q1 = d3.quantile(winnerVals, 0.25);
-        const median = d3.quantile(winnerVals, 0.5);
-        const q3 = d3.quantile(winnerVals, 0.75);
-        const iqr = q3 - q1;
-        const lo = Math.max(d3.min(winnerVals), q1 - 1.5 * iqr);
-        const hi = Math.min(d3.max(winnerVals), q3 + 1.5 * iqr);
+        const { q1, median, q3, lo, hi } = boxStats(winnerVals);
         const bx = xScale(era), bw = xScale.bandwidth();
 
         svg.append("line").attr("x1", bx + bw / 2).attr("x2", bx + bw / 2)
@@ -1365,6 +1387,7 @@ function renderPlayerVsWinnersBoxPlot(player) {
         svg.append("line").attr("x1", bx).attr("x2", bx + bw)
             .attr("y1", yScale(median)).attr("y2", yScale(median))
             .attr("stroke", "#000").attr("stroke-width", 2);
+        drawOutliers(svg, winners.filter(w => w[metric] !== null), metric, bx + bw / 2, yScale, lo, hi);
     }
 
     if (!hasPlayerVal) return;

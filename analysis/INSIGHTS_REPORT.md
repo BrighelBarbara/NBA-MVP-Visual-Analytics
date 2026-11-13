@@ -35,19 +35,18 @@ Da qui tre grandezze, per ogni candidato o stagione:
 | Grandezza | Definizione | Dove si vede |
 |---|---|---|
 | **Share attesa** | voto previsto dal modello | asse *Attesa* del PCP, Line Chart (vista iniziale) |
-| **Narrativa** | share reale − share attesa | colore del tratto Attesa → Reale nel PCP (blu sale, rosso scende), barre divergenti della sidebar |
-| **Scelta statistica** | candidato con la share attesa più alta della stagione | tratteggio e segmenti rossi nella Line Chart, collegamento in PCA al click |
+| **Narrativa** | share reale − share attesa | colore del tratto Attesa → Reale nel PCP (viola = voto sopra l'atteso, arancione = sotto), barre divergenti della sidebar |
+| **Scelta statistica** | candidato con la share attesa più alta della stagione | linea tratteggiata nella Line Chart (distanza dalle ★ degli MVP reali), collegamento in PCA al click |
 
 Un **MVP controcorrente** è una stagione in cui ha vinto un candidato diverso
 dalla scelta statistica, con uno scarto di share attesa ≥ 0,15. Sotto questa
 soglia il caso è trattato come un quasi pari merito.
 
 **Analytics innescata dall'interazione.** Ogni brush (PCA, assi del PCP) o
-filtro per era (legenda, Box Plot) **ristima il modello del voto sulla sola
-selezione**. Il risultato è disegnato sotto ogni era del Box Plot (barre del
-peso del merito e del record) e, nella sidebar di approfondimento, come barre
-"selezione" (pesi, R², quota di voti quasi nulli) con la tacca del modello su
-tutti i candidati.
+filtro per era (click su un box del Box Plot) **ristima il modello del voto sulla sola
+selezione**. Il risultato è disegnato nella sidebar di approfondimento come
+barre "selezione" (pesi, R², quota di voti quasi nulli) con la tacca del
+modello su tutti i candidati.
 
 ---
 
@@ -168,7 +167,7 @@ L'ipotesi iniziale (soglia al 60–65%, nata da 4 casi aneddotici: Garnett,
 Nowitzki, Nash, Curry) è stata **corretta** dalla verifica sul campione
 completo: il fenomeno era giusto, il punto di rottura no. Nella dashboard si
 vede filtrando nel PCP i candidati con PIE alto e record sotto il 55%: i tratti
-Attesa → Reale diventano quasi tutti rossi e cadono verso lo 0, e nel modello
+Attesa → Reale diventano quasi tutti arancioni e cadono verso lo 0, e nel modello
 ristimato su questo gruppo la barra del peso del merito sparisce (conta solo il
 record di squadra).
 
@@ -264,51 +263,54 @@ mostra solo nella demo.
 
 | Insight | Prova visiva | Grafico |
 |---|---|---|
-| 1 | segmenti rossi (scarto MVP reale → scelta statistica) lunghi solo tra il 1997 e il 2011 | Line Chart (vista iniziale) |
-| 2 | sotto ogni era la barra scura del peso del merito si allunga, quella grigia del record resta uguale | Box Plot |
-| 3 | le frecce rosse degli MVP controcorrente puntano tutte verso sinistra (da lunghi a guardie) | PCA |
-| 4 | dopo il brush, i tratti Attesa → Reale diventano rossi e cadono verso lo 0 | PCP |
+| 1 | distanza grande tra ★ (MVP reale) e tratteggio (scelta statistica) solo tra il 1997 e il 2011 | Line Chart (vista iniziale) |
+| 2 | filtrando un'era alla volta, nella sidebar la barra del peso del merito si allunga da Pre-Analytics a Small-Ball, quella del record resta uguale | Box Plot + sidebar |
+| 3 | cliccando un MVP controcorrente, la linea tratteggiata lo collega a una scelta statistica più a destra (da lunghi a guardie) | PCA |
+| 4 | dopo il brush, i tratti Attesa → Reale diventano arancioni e cadono verso lo 0 | PCP |
 | caso Nash | linea tratteggiata da Nash a Duncan; nella sidebar la ★ di Nash lontana dall'anello della scelta statistica | PCA + sidebar |
 
 **S1 — Quando il voto è andato contro le statistiche (Insight 1)**
 - [ ] All'apertura, Line Chart: ★ = share attesa dell'MVP reale, tratteggio =
-      scelta statistica. I 6 segmenti rossi lunghi stanno tutti prima del
-      2011-12; dopo, ★ e tratteggio coincidono.
+      scelta statistica. I 6 scarti grandi tra ★ e tratteggio stanno tutti
+      prima del 2011-12; dopo, ★ e tratteggio coincidono.
 - [ ] Click su Nash 2004-05 nella PCA (stella in basso a sinistra): la PCA lo
       collega a Duncan; nella sidebar la stella di Nash è lontana a sinistra
       dell'anello della scelta statistica.
 
 **S2 — Come votano le ere (Insight 2)**
-- [ ] Box Plot senza filtri: da Pre-Analytics a Small-Ball la barra del peso
-      del merito si allunga, quella del record no (valori nel tooltip).
-- [ ] Click su *Small-Ball* in legenda: tutte le viste si filtrano; nella
-      Line Chart le stagioni dell'era non hanno segmenti rossi lunghi.
+- [ ] Click sul box di ogni era, una alla volta: nella sidebar ("Come vota
+      la selezione") da Pre-Analytics a Small-Ball la barra del peso del
+      merito si allunga, quella del record no (valori nel tooltip).
+- [ ] Click sul box *Small-Ball* nel Box Plot: tutte le viste si filtrano;
+      nella Line Chart, nelle stagioni dell'era ★ e tratteggio quasi
+      coincidono.
 
 **S2bis — Guardie contro lunghi (Insight 3)**
-- [ ] PCA senza filtri: le 6 frecce rosse vanno dalla scelta statistica
-      (cerchio) all'MVP reale (stella), e 5 su 6 attraversano la linea
-      tratteggiata da destra verso sinistra.
-- [ ] Click su *Transition* in legenda: restano accese 3 frecce (Nash
-      2005-06, Kobe 2007-08, Rose 2010-11), tutte verso sinistra.
-- [ ] Click su *Small-Ball*: tutte le frecce si spengono (nessun MVP
-      controcorrente nell'era) e le stelle accese stanno a destra o sulla
-      linea tratteggiata (Giannis ×2, Jokic ×2, Embiid); in *Transition* quasi
-      tutte stavano a sinistra.
+- [ ] PCA senza filtri: click uno alla volta sui 6 MVP controcorrente
+      (stelle). La linea tratteggiata li collega alla scelta statistica della
+      stagione: in 5 casi su 6 la scelta statistica sta più a destra (lunghi)
+      e l'MVP reale a sinistra della linea verticale PC1 = 0 (guardie).
+- [ ] Click sul box *Transition* nel Box Plot: nella PCA restano evidenziati
+      i candidati dell'era; Nash 2005-06, Kobe 2007-08 e Rose 2010-11 stanno
+      a sinistra della loro scelta statistica.
+- [ ] Click sul box *Small-Ball*: nessun MVP controcorrente nell'era, e le
+      stelle evidenziate stanno a destra o sulla linea PC1 = 0 (Giannis ×2,
+      Jokic ×2, Embiid); in *Transition* quasi tutte stavano a sinistra.
 
 **S3 — La soglia del 55% (Insight 4)**
 - [ ] PCP: brush su PIE ≥ 0,17 e su W% ≤ 0,55.
-- [ ] I tratti Attesa → Reale sono quasi tutti rossi e cadono a 0; nella
+- [ ] I tratti Attesa → Reale sono quasi tutti arancioni e cadono a 0; nella
       sidebar la barra "Voto ≈ 0" supera la tacca di tutti i candidati.
 
 **S4 — Chi ha preso più voti delle sue statistiche (Insight 1 e 5)**
-- [ ] Sidebar, barre blu: Iverson 00-01, Rose 10-11, Bryant 07-08, tutti MVP
+- [ ] Sidebar, barre viola: Iverson 00-01, Rose 10-11, Bryant 07-08, tutti MVP
       controcorrente. Click su uno: nel PCP il suo tratto Attesa → Reale sale
       ripido.
 - [ ] PCP: brush sull'asse *Reale* sopra 0,7 → restano quasi solo MVP, con
-      tratti blu.
+      tratti viola.
 
 **S5 — Il superteam (Insight 6)**
-- [ ] Sidebar, barre rosse: Durant 16-17; click → atteso alto, reale ~0.
+- [ ] Sidebar, barre arancioni: Durant 16-17; click → atteso alto, reale ~0.
 
 **Facoltativo — regressione on demand**
 - [ ] Click sull'etichetta *PIE* nel PCP, poi brush sulla timeline 2011–2023:

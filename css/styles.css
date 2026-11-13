@@ -16,7 +16,6 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    min-height: 760px;
 }
 
 .navbar {
@@ -548,36 +547,7 @@ svg text {
 
 
 
-.era-model-pie { fill: var(--merit); }
-.era-model-team { fill: var(--team); }
 
-.era-model-val, .era-model-na {
-    font-size: 9px;
-    fill: #555;
-}
-
-.era-model-r2 {
-    font-size: 10px;
-    font-weight: 700;
-    fill: #1a252f;
-}
-
-
-.biplot { pointer-events: none; }
-.biplot-arrow {
-    stroke: #555;
-    stroke-width: 1.2px;
-    opacity: 0.75;
-}
-.biplot-head { fill: #555; }
-.biplot-label {
-    font-size: 9.5px;
-    font-weight: 700;
-    fill: #333;
-    paint-order: stroke;
-    stroke: #fff;
-    stroke-width: 3px;
-}
 
 .vote-seg {
     stroke-width: 1.3px;
@@ -597,7 +567,6 @@ svg text {
 
 .bar-track { fill: #ecf0f1; }
 .bar-track-line { stroke: #d5dbdb; stroke-width: 6px; stroke-linecap: round; }
-.era-model-track { fill: #ecf0f1; }
 .dot-expected { fill: #fff; stroke: #1a252f; stroke-width: 1.5px; }
 .dot-season { fill: #95a5a6; }
 .dot-choice { fill: none; stroke: #555; stroke-width: 1.6px; }
@@ -605,16 +574,6 @@ svg text {
 .row-hit { fill: transparent; }
 g.narrative-row { cursor: pointer; }
 g.narrative-row:hover .row-hit { fill: #ecf0f1; }
-.biplot-frame {
-    fill: rgba(255, 255, 255, 0.92);
-    stroke: #d5dbdb;
-}
-.biplot-title {
-    font-size: 9px;
-    fill: #7f8c8d;
-    font-weight: 600;
-}
-
 .shift-layer { pointer-events: none; }
 .pc1-zero {
     stroke: #95a5a6;
@@ -682,4 +641,18 @@ body.modal-open .modal-backdrop {
 
 #pca-card h2, #pcp-card h2, #line-card h2, #boxplot-card h2 {
     padding-right: 32px;
+}
+
+.box-outlier {
+    fill: #fff;
+    stroke: #000;
+    stroke-width: 1px;
+    cursor: pointer;
+}
+
+.out-of-scale {
+    font-size: 8px;
+    font-weight: 700;
+    fill: #000;
+    pointer-events: none;
 }
