@@ -365,12 +365,17 @@ function renderCardLegend(target, items) {
         }
         const el = legend.append("div").attr("class", "legend-item").classed("legend-shared", !!item.shared);
         const wide = item.type === "line";
-        const icon = el.append("svg").attr("width", wide ? 20 : 14).attr("height", 14);
+        const iconRadius = item.radius ?? LEGEND_R;
+        const iconSize = 2 * iconRadius + 5;
+        const isSymbol = item.type === "star" || item.type === "circle";
+        const icon = el.append("svg")
+            .attr("width", wide ? 20 : isSymbol ? iconSize : 14)
+            .attr("height", isSymbol ? iconSize : 14);
         if (item.type === "star" || item.type === "circle") {
             const type = item.type === "star" ? d3.symbolStar : d3.symbolCircle;
-            const size = item.type === "star" ? (LEGEND_R * LEGEND_R) / 0.89081309152928522810 : Math.PI * LEGEND_R * LEGEND_R * 0.8;
+            const size = item.type === "star" ? (iconRadius * iconRadius) / 0.89081309152928522810 : Math.PI * iconRadius * iconRadius * 0.8;
             icon.append("path")
-                .attr("transform", "translate(7,7)")
+                .attr("transform", `translate(${iconSize / 2},${iconSize / 2})`)
                 .attr("d", d3.symbol().type(type).size(size)())
                 .attr("fill", item.fill || "#7f8c8d")
                 .attr("stroke", item.stroke || "none")
@@ -396,7 +401,7 @@ function renderCardLegend(target, items) {
 function renderLegend() {
     renderCardLegend("#global-legend", [
         { type: "eras" },
-        { type: "star", text: "MVP reale", stroke: "#000" },
+        { type: "star", text: "MVP reale", stroke: "#000", radius: 10 },
     ]);
     renderCardLegend("#pca-legend", [
         { type: "eras" },
