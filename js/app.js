@@ -634,10 +634,14 @@ function renderParallelCoordinates(data) {
 
     const selections = {};
 
+    const voteDomain = [
+        d3.min(globalData, d => Math.min(d.Expected_Share, d.MVP_Share)),
+        d3.max(globalData, d => Math.max(d.Expected_Share, d.MVP_Share)),
+    ];
     const yScales = {};
     dimensions.forEach(dim => {
         yScales[dim] = d3.scaleLinear()
-            .domain(d3.extent(globalData, d => d[dim])).nice()
+            .domain(VOTE_DIMENSIONS.includes(dim) ? voteDomain : d3.extent(globalData, d => d[dim])).nice()
             .range([height, 0]);
     });
 
