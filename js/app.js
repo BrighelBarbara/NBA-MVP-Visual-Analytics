@@ -49,6 +49,8 @@ let MVP_SCORE_WEIGHTS = {};
 const keyOf = d => `${d.Player}_${d.Season}`;
 const fmtPct = v => `${(v * 100).toFixed(0)}%`;
 const fmtPctPrecise = v => `${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%`;
+// Costante di d3.symbolStar: raggio esterno = sqrt(size · STAR_KA).
+const STAR_KA = 0.89081309152928522810;
 const fmtSigned = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}`;
 
 const filters = { pca: null, pcp: null, era: null };
@@ -344,8 +346,8 @@ function toggleEra(era) {
 const LEGEND_R = 4.5;
 let shareSizeScale;
 const SHARE_BINS = [0.05, 0.25, 0.5, 0.75];   // 5 intervalli di share
-const SHARE_R_MIN = 3;
-const SHARE_R_MAX = 14;
+const SHARE_R_MIN = 2.5;
+const SHARE_R_MAX = 10;
 function shareRadius(v) {
     return Number.isFinite(v) ? shareSizeScale(v) : SHARE_R_MIN;
 }
@@ -393,7 +395,7 @@ function renderCardLegend(target, items) {
             .attr("height", isSymbol ? iconSize : 14);
         if (item.type === "star" || item.type === "circle") {
             const type = item.type === "star" ? d3.symbolStar : d3.symbolCircle;
-            const size = item.type === "star" ? (iconRadius * iconRadius) / 0.89081309152928522810 : Math.PI * iconRadius * iconRadius * 0.8;
+            const size = item.type === "star" ? (iconRadius * iconRadius) / STAR_KA : Math.PI * iconRadius * iconRadius * 0.8;
             icon.append("path")
                 .attr("transform", `translate(${iconSize / 2},${iconSize / 2})`)
                 .attr("d", d3.symbol().type(type).size(size)())
@@ -489,12 +491,13 @@ function renderPCAScatterplot(data) {
         .domain(d3.extent(data, d => d.PC2)).nice()
         .range([height, 0]);
 
-    // Stella (MVP) e cerchio hanno la stessa AREA a parità di intervallo.
+    // Stella (MVP) e cerchio hanno lo stesso RAGGIO (ingombro) a parità di intervallo:
+    // la punta della stella arriva dove arriva il bordo del cerchio.
     const symbolGenerator = d3.symbol()
         .type(d => d.Is_MVP_Winner === 1 ? d3.symbolStar : d3.symbolCircle)
         .size(d => {
             const r = shareRadius(d.MVP_Share);
-            return Math.PI * r * r;
+            return d.Is_MVP_Winner === 1 ? (r * r) / STAR_KA : Math.PI * r * r;
         });
 
     svg.append("g")
