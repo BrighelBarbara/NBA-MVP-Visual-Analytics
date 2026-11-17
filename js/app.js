@@ -48,6 +48,7 @@ let MVP_SCORE_WEIGHTS = {};
 
 const keyOf = d => `${d.Player}_${d.Season}`;
 const fmtPct = v => `${(v * 100).toFixed(0)}%`;
+const fmtPctPrecise = v => `${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%`;
 const fmtSigned = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}`;
 
 const filters = { pca: null, pcp: null, era: null };
@@ -79,9 +80,16 @@ Promise.all([
     });
 
     globalData = data;
-    shareSizeScale = d3.scaleSqrt()
-        .domain([0, d3.max(data, d => d.MVP_Share) || 1])
-        .range([2.5, 10]);
+    // Dimensione a intervalli (5 classi di share): pochi livelli ben distinguibili.
+    // Il raggio di ogni classe ha AREA proporzionale al valore centrale della classe
+    // (scala sqrt da 0), con un minimo di 3 px per la visibilità.
+    // Soglie fisse sull'intero dataset: filtri e brushing non cambiano le dimensioni.
+    const maxShare = d3.max(data, d => d.MVP_Share) || 1;
+    const areaScale = d3.scaleSqrt().domain([0, maxShare]).range([0, SHARE_R_MAX]);
+    const edges = [0, ...SHARE_BINS, maxShare];
+    const radii = d3.range(edges.length - 1)
+        .map(i => Math.max(SHARE_R_MIN, areaScale((edges[i] + edges[i + 1]) / 2)));
+    shareSizeScale = d3.scaleThreshold().domain(SHARE_BINS).range(radii);
     insightsData = insights;
     pcaMeta = meta;
     leagueAverages = league.seasons;
@@ -335,6 +343,16 @@ function toggleEra(era) {
 
 const LEGEND_R = 4.5;
 let shareSizeScale;
+const SHARE_BINS = [0.05, 0.25, 0.5, 0.75];   // 5 intervalli di share
+const SHARE_R_MIN = 3;
+const SHARE_R_MAX = 14;
+function shareRadius(v) {
+    return Number.isFinite(v) ? shareSizeScale(v) : SHARE_R_MIN;
+}
+function shareClassLabels() {
+    const b = SHARE_BINS.map(fmtPct);
+    return [`< ${b[0]}`, ...b.slice(1).map((v, i) => `${b[i]}–${v}`), `≥ ${b[b.length - 1]}`];
+}
 
 function renderCardLegend(target, items) {
     const legend = d3.select(target);
@@ -354,12 +372,14 @@ function renderCardLegend(target, items) {
         }
         if (item.type === "sizes") {
             legend.append("span").attr("class", "legend-heading").text(item.heading);
-            item.values.forEach(v => {
-                const r = item.scale(v);
+            // Un cerchio per intervallo, con gli stessi raggi usati nel grafico.
+            item.scale.range().forEach((r, i) => {
                 const el = legend.append("div").attr("class", "legend-item");
                 el.append("svg").attr("width", 2 * r + 2).attr("height", 2 * r + 2)
-                    .append("circle").attr("cx", r + 1).attr("cy", r + 1).attr("r", r).attr("fill", "#7f8c8d");
-                el.append("span").text(item.format(v));
+                    .append("circle").attr("cx", r + 1).attr("cy", r + 1).attr("r", r)
+                    .attr("fill", "#7f8c8d").attr("fill-opacity", 0.7)
+                    .attr("stroke", "#fff").attr("stroke-width", 0.5);
+                el.append("span").text(item.labels[i]);
             });
             return;
         }
@@ -406,7 +426,8 @@ function renderLegend() {
     renderCardLegend("#pca-legend", [
         { type: "eras" },
         { type: "star", text: "MVP reale", stroke: "#000", shared: true },
-        { type: "sizes", heading: "Area = share voto:", values: [0.1, 0.5, 1], scale: shareSizeScale, format: fmtPct },
+        { type: "sizes", heading: "Area = share voto MVP (% punti ricevuti):",
+          scale: shareSizeScale, labels: shareClassLabels() },
     ]);
     renderCardLegend("#pcp-legend", [
         { type: "eras" },
@@ -468,12 +489,12 @@ function renderPCAScatterplot(data) {
         .domain(d3.extent(data, d => d.PC2)).nice()
         .range([height, 0]);
 
-    const STAR_KA = 0.89081309152928522810;
+    // Stella (MVP) e cerchio hanno la stessa AREA a parità di intervallo.
     const symbolGenerator = d3.symbol()
         .type(d => d.Is_MVP_Winner === 1 ? d3.symbolStar : d3.symbolCircle)
         .size(d => {
-            const r = shareSizeScale(d.MVP_Share);
-            return d.Is_MVP_Winner === 1 ? (r * r) / STAR_KA : Math.PI * r * r;
+            const r = shareRadius(d.MVP_Share);
+            return Math.PI * r * r;
         });
 
     svg.append("g")
@@ -506,7 +527,7 @@ function renderPCAScatterplot(data) {
         .attr("fill", d => ERA_COLORS[d.Tactical_Era] || "#7f8c8d")
         .attr("stroke", d => d.Is_MVP_Winner === 1 ? "#000" : "#fff")
         .attr("stroke-width", d => d.Is_MVP_Winner === 1 ? 1.2 : 0.5)
-        .attr("opacity", 0.85);
+        .attr("opacity", 0.7);
 
     const shiftLayer = svg.append("g").attr("class", "shift-layer");
     shiftLayer.append("line").attr("class", "pc1-zero")
@@ -584,7 +605,7 @@ function candidateTooltipHtml(d) {
     const narrativeColor = d.Narrative >= 0 ? RESIDUAL_COLORS_LIGHT.positive : RESIDUAL_COLORS_LIGHT.negative;
     return `<strong>${d.Player}</strong> (${d.Season}, ${d.Team})${d.Is_MVP_Winner === 1 ? " ★ MVP" : ""}${d.Prev_MVP ? " · MVP uscente" : ""}<br>` +
         `${d.Tactical_Era} · PTS ${d.PTS} · PIE ${d.PIE} · WS ${fmt(d.WS)} · Team W% ${fmtPct(d.Team_W_PCT)}<br>` +
-        `Voto: reale <b>${fmtPct(d.MVP_Share)}</b> · atteso ${fmtPct(Math.max(0, d.Expected_Share))} · ` +
+        `Voto: reale <b>${fmtPctPrecise(d.MVP_Share)}</b> · atteso ${fmtPctPrecise(Math.max(0, d.Expected_Share))} · ` +
         `narrativa <b style="color:${narrativeColor}">${fmtSigned(d.Narrative)}</b>`;
 }
 
