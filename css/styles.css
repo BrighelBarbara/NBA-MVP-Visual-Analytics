@@ -279,10 +279,32 @@ svg text {
     stroke-width: 2.5px;
 }
 
-#boxplot-desc a {
-    color: #1a252f;
-    text-decoration: underline;
-    cursor: pointer;
+.share-box:hover rect {
+    opacity: 0.9;
+}
+
+.share-ref-box line,
+.share-ref-box rect {
+    fill: none;
+    stroke: #95a5a6;
+    stroke-width: 1.2px;
+    pointer-events: none;
+}
+
+.share-ref-box .share-ref-median {
+    stroke-width: 2px;
+    stroke-dasharray: 3,2;
+}
+
+.share-divider {
+    stroke: #bdc3c7;
+    stroke-width: 1px;
+    stroke-dasharray: 3,3;
+}
+
+.share-box-label {
+    font-size: 10px;
+    fill: #000;
 }
 
 .legend {

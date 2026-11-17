@@ -359,3 +359,22 @@ grafico viene ridisegnato alla nuova dimensione (`setupExpandableCards`,
 `toggleExpand`, `rerenderCard` in `js/app.js`). Chiusura con ✕, click sullo
 sfondo o Esc. Filtri delle altre viste e candidato selezionato restano
 attivi; il brush della vista ridisegnata (PCA o PCP) viene azzerato.
+
+## 17. Codifica della dimensione e 4° box del Box Plot
+
+- **Dimensione dei simboli nella PCA a classi.** La share è divisa in 5
+  intervalli (< 5%, 5–25%, 25–50%, 50–75%, ≥ 75%) con `d3.scaleThreshold`.
+  Il raggio di ogni classe ha area proporzionale al valore centrale
+  dell'intervallo (`scaleSqrt` da 0), raggio da 2,5 a 10 px. La legenda ha un
+  cerchio per intervallo, con gli stessi raggi del grafico. Stella e cerchio
+  della stessa classe hanno lo stesso raggio. Opacità dei punti 0,7.
+- **4° box del Box Plot: Narrativa (share reale − attesa)** della selezione
+  corrente, su un asse proprio a dominio fisso, con il box dell'intero dataset
+  come riferimento quando c'è un filtro attivo (`renderShareBox`,
+  `fourthBoxMetric`). Motivazioni e numeri nel report, §2ter.
+- **Boxplot più leggibili** (tutti): i baffi non attraversano più il box
+  (`drawWhiskers`), gli outlier stanno in colonna e si affiancano solo se si
+  sovrapporrebbero (`dodgeOutliers`).
+- **Tooltip:** share sotto il 10% con un decimale (`fmtPctPrecise`).
+- **Rimosso il link "torna al confronto per era"**: per tornare indietro
+  restano "azzera tutti i filtri", Esc e il click sul vuoto.

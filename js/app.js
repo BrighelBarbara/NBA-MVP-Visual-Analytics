@@ -218,7 +218,7 @@ function setupExpandableCards() {
 }
 
 const DESELECT_CARDS = ["pca-card", "pcp-card", "line-card", "boxplot-card"];
-const NO_CLEAR_TARGETS = ".brush, .polyline, .vote-seg, .axis-label, .legend, .era-box, .box-outlier, a, button";
+const NO_CLEAR_TARGETS = ".brush, .polyline, .vote-seg, .axis-label, .legend, .era-box, .share-box, .box-outlier, a, button";
 
 function clearBrushes(root) {
     root.selectAll(".brush").each(function() {
@@ -1005,12 +1005,47 @@ function boxStats(sorted) {
     return { q1, median, q3, lo, hi };
 }
 
-function drawOutliers(svg, rows, metric, cx, yScale, lo, hi) {
+// Baffi come due segmenti separati (lo→Q1 e Q3→hi): la linea non attraversa il box.
+function drawWhiskers(g, cx, capW, yScale, { lo, q1, q3, hi }) {
+    [[lo, q1], [q3, hi]].forEach(([a, b]) => g.append("line")
+        .attr("x1", cx).attr("x2", cx).attr("y1", yScale(a)).attr("y2", yScale(b)).attr("stroke", "#000"));
+    [lo, hi].forEach(v => g.append("line")
+        .attr("x1", cx - capW / 2).attr("x2", cx + capW / 2)
+        .attr("y1", yScale(v)).attr("y2", yScale(v)).attr("stroke", "#000"));
+}
+
+const OUTLIER_R = 2.5;
+// Outlier in un'unica colonna sull'asse del box (come nelle slide). Un punto viene
+// affiancato (alternando destra/sinistra) SOLO se si sovrapporrebbe a uno già disegnato,
+// come nel dot plot delle slide: gli outlier isolati restano sulla colonna.
+function dodgeOutliers(ys, maxSpread) {
+    const minDist = 2 * OUTLIER_R + 0.5;
+    const step = minDist;
+    const maxK = Math.max(0, Math.floor(maxSpread / 2 / step));
+    const placed = [];
+    return ys.map(y => {
+        let best = 0;
+        for (let k = 0; k <= maxK; k++) {
+            const candidates = k === 0 ? [0] : [k * step, -k * step];
+            const free = candidates.find(dx =>
+                placed.every(p => Math.hypot(p.dx - dx, p.y - y) >= minDist));
+            if (free !== undefined) { best = free; break; }
+            best = candidates[candidates.length - 1];
+        }
+        placed.push({ dx: best, y });
+        return best;
+    });
+}
+
+function drawOutliers(svg, rows, metric, cx, yScale, lo, hi, spread = 0) {
+    const out = rows.filter(d => d[metric] < lo || d[metric] > hi)
+        .sort((a, b) => a[metric] - b[metric]);
+    const dx = dodgeOutliers(out.map(d => yScale(d[metric])), spread);
     svg.selectAll(null)
-        .data(rows.filter(d => d[metric] < lo || d[metric] > hi))
+        .data(out)
         .enter().append("circle")
         .attr("class", "box-outlier")
-        .attr("cx", cx).attr("cy", d => yScale(d[metric])).attr("r", 2.8)
+        .attr("cx", (d, i) => cx + dx[i]).attr("cy", d => yScale(d[metric])).attr("r", OUTLIER_R)
         .on("click", (event, d) => { event.stopPropagation(); toggleCandidate(d); })
         .on("mouseenter mousemove", (event, d) => showTooltip(
             `<strong>${d.Player}</strong> (${d.Season})<br>${label(metric)} ${formatMetric(metric, d[metric])} · outlier`, event))
@@ -1020,11 +1055,18 @@ function drawOutliers(svg, rows, metric, cx, yScale, lo, hi) {
 function renderBoxPlot(data) {
 
     const metric = currentMetric === "Expected_Share" ? "PIE" : currentMetric;
-    d3.select("#boxplot-title").text(`${label(metric)} per era`);
-    d3.select("#boxplot-desc").html(`Click su un box per filtrare l'era.`);
+    const shareMetric = fourthBoxMetric(metric);
+    d3.select("#boxplot-title").text(`${label(metric)} per era · ${label(shareMetric)}`);
+    d3.select("#boxplot-desc").html(shareMetric === "Narrative"
+        ? `Click su un box per filtrare l'era · a destra la narrativa (share reale − attesa) della selezione: sopra lo 0 votata più delle statistiche.`
+        : `Click su un box per filtrare l'era · a destra la ${label(shareMetric).toLowerCase()} della selezione corrente (asse proprio).`);
 
     renderCardLegend("#boxplot-legend", [
         { type: "eras" },
+        { type: "rect", fill: "#bdc3c7", opacity: 0.7, stroke: "#000", text: `${label(shareMetric)} (selezione)` },
+        ...(data.length < globalData.length
+            ? [{ type: "rect", fill: "none", stroke: "#95a5a6", text: "Intero dataset (riferimento)" }]
+            : []),
         { type: "circle", fill: "#fff", stroke: "#000", text: "Outlier (oltre 1,5×IQR)" },
     ]);
 
@@ -1043,7 +1085,13 @@ function renderBoxPlot(data) {
     const { width, height } = chartSize(container, margin);
     const svg = appendSvg(container, width, height, margin);
 
-    const xScale = d3.scaleBand().domain(ERAS).range([0, width]).padding(0.45);
+    // Il 4° box (share) è una vista affiancata con un asse PROPRIO:
+    // la share ha un'unità diversa dalla metrica delle ere, quindi non condivide l'asse y.
+    const SHARE_AXIS_W = 44, SHARE_GAP = 14;
+    const sharePanelW = Math.max(50, width * 0.2);
+    const mainW = Math.max(60, width - SHARE_GAP - SHARE_AXIS_W - sharePanelW);
+
+    const xScale = d3.scaleBand().domain(ERAS).range([0, mainW]).padding(0.45);
     const yScale = d3.scaleLinear().domain(d3.extent(values)).nice().range([height, 0]);
 
     svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(xScale));
@@ -1051,7 +1099,7 @@ function renderBoxPlot(data) {
     addYAxisTitle(svg, height, margin.left, axisTitle(metric));
     if (metric === "Narrative" && yScale.domain()[0] < 0) {
         svg.append("line").attr("class", "zero-line")
-            .attr("x1", 0).attr("x2", width).attr("y1", yScale(0)).attr("y2", yScale(0));
+            .attr("x1", 0).attr("x2", mainW).attr("y1", yScale(0)).attr("y2", yScale(0));
     }
 
     ERAS.forEach(era => {
@@ -1071,14 +1119,99 @@ function renderBoxPlot(data) {
                 `IQR ${formatMetric(metric, q1)}–${formatMetric(metric, q3)}<br>Click per filtrare l'era`, event))
             .on("mouseleave", hideTooltip);
 
-        g.append("line").attr("x1", x + boxWidth / 2).attr("x2", x + boxWidth / 2).attr("y1", yScale(min)).attr("y2", yScale(max)).attr("stroke", "#000");
-        [min, max].forEach(v => g.append("line")
-            .attr("x1", x + boxWidth / 4).attr("x2", x + boxWidth * 3 / 4)
-            .attr("y1", yScale(v)).attr("y2", yScale(v)).attr("stroke", "#000"));
+        drawWhiskers(g, x + boxWidth / 2, boxWidth / 2, yScale, { lo: min, q1, q3, hi: max });
         g.append("rect").attr("x", x).attr("y", yScale(q3)).attr("height", Math.max(1, yScale(q1) - yScale(q3))).attr("width", boxWidth).attr("fill", ERA_COLORS[era]).attr("opacity", 0.7).attr("stroke", "#000");
         g.append("line").attr("x1", x).attr("x2", x + boxWidth).attr("y1", yScale(median)).attr("y2", yScale(median)).attr("stroke", "#000").attr("stroke-width", 2);
-        drawOutliers(svg, eraRows, metric, x + boxWidth / 2, yScale, min, max);
+        drawOutliers(svg, eraRows, metric, x + boxWidth / 2, yScale, min, max, boxWidth * 0.6);
     });
+
+    renderShareBox(svg, data, {
+        metric, x0: mainW + SHARE_GAP + SHARE_AXIS_W, panelW: sharePanelW,
+        axisW: SHARE_AXIS_W, height, boxWidth: xScale.bandwidth(),
+    });
+}
+
+// Il 4° box mostra la Narrativa = share reale − share attesa: un solo box che contiene
+// entrambe le share (valore derivato, grafico di deviazione con baseline 0).
+// Fallback sulla share reale solo se le ere stanno già mostrando la Narrativa.
+function fourthBoxMetric(metric) {
+    return metric === "Narrative" ? "MVP_Share" : "Narrative";
+}
+
+// 4° boxplot: distribuzione della Narrativa nella selezione corrente (tutte le ere,
+// o solo l'era filtrata). Si aggiorna con brush, filtro PCP e filtro era (viste coordinate).
+function renderShareBox(svg, data, { metric, x0, panelW, axisW, height, boxWidth }) {
+    const shareMetric = fourthBoxMetric(metric);
+    const fmt = v => formatMetric(shareMetric, v);
+    const valid = v => v !== null && v !== undefined && !Number.isNaN(v);
+
+    // Dominio FISSO sull'intero dataset: il box si muove con i filtri, l'asse no,
+    // così selezioni diverse restano confrontabili.
+    const yShare = d3.scaleLinear()
+        .domain([Math.min(0, d3.min(globalData, d => d[shareMetric])), d3.max(globalData, d => d[shareMetric])])
+        .nice().range([height, 0]);
+
+    const panel = svg.append("g").attr("class", "share-panel").attr("transform", `translate(${x0},0)`);
+    panel.append("line").attr("class", "share-divider")
+        .attr("x1", -axisW - 7).attr("x2", -axisW - 7).attr("y1", 0).attr("y2", height + 20);
+    // Etichette compatte (+0.4, 0, −0.4) e titolo breve: non si sovrappongono all'asse.
+    const tickFmt = shareMetric === "Narrative"
+        ? v => (v === 0 ? "0" : `${v > 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}`)
+        : v => formatMetric(shareMetric, v);
+    panel.append("g").call(d3.axisLeft(yShare).ticks(4).tickFormat(tickFmt));
+    addYAxisTitle(panel, height, axisW,
+        shareMetric === "Narrative" ? "Narrativa (reale − attesa)" : axisTitle(shareMetric));
+    if (yShare.domain()[0] < 0) {
+        panel.append("line").attr("class", "zero-line")
+            .attr("x1", 0).attr("x2", panelW).attr("y1", yShare(0)).attr("y2", yShare(0));
+    }
+
+    const cx = panelW / 2;
+    const scopeLabel = filters.era || "Tutte le ere";
+    panel.append("text").attr("class", "share-box-label")
+        .attr("x", cx).attr("y", height + 16).attr("text-anchor", "middle").text(scopeLabel);
+
+    const rows = data.filter(d => valid(d[shareMetric]));
+    const values = rows.map(d => d[shareMetric]).sort(d3.ascending);
+    if (values.length === 0) return;
+
+    // Box di riferimento (intero dataset): solo contorno grigio, più largo e disegnato
+    // sotto, così lo spostamento della selezione rispetto al totale si legge subito.
+    const isFiltered = data.length < globalData.length;
+    const refValues = globalData.map(d => d[shareMetric]).filter(valid).sort(d3.ascending);
+    const ref = boxStats(refValues);
+    if (isFiltered) {
+        const refW = boxWidth * 1.5;
+        const rg = panel.append("g").attr("class", "share-ref-box");
+        rg.append("line").attr("x1", cx).attr("x2", cx).attr("y1", yShare(ref.lo)).attr("y2", yShare(ref.q1));
+        rg.append("line").attr("x1", cx).attr("x2", cx).attr("y1", yShare(ref.q3)).attr("y2", yShare(ref.hi));
+        [ref.lo, ref.hi].forEach(v => rg.append("line")
+            .attr("x1", cx - refW / 4).attr("x2", cx + refW / 4).attr("y1", yShare(v)).attr("y2", yShare(v)));
+        rg.append("rect").attr("x", cx - refW / 2).attr("y", yShare(ref.q3))
+            .attr("width", refW).attr("height", Math.max(1, yShare(ref.q1) - yShare(ref.q3)));
+        rg.append("line").attr("class", "share-ref-median")
+            .attr("x1", cx - refW / 2).attr("x2", cx + refW / 2)
+            .attr("y1", yShare(ref.median)).attr("y2", yShare(ref.median));
+    }
+
+    const { q1, median, q3, lo, hi } = boxStats(values);
+    const x = cx - boxWidth / 2;
+    const fill = filters.era ? ERA_COLORS[filters.era] : "#bdc3c7";
+    const refLine = isFiltered
+        ? `<br><span style="opacity:0.75">Intero dataset: mediana ${fmt(ref.median)} · IQR ${fmt(ref.q1)} / ${fmt(ref.q3)}</span>`
+        : "";
+    const g = panel.append("g").attr("class", "share-box")
+        .on("mouseenter mousemove", (event) => showTooltip(
+            `<strong>${label(shareMetric)}</strong> · ${isFiltered ? "selezione" : "intero dataset"}, ${scopeLabel} (n=${values.length})<br>` +
+            `Mediana ${fmt(median)} · IQR ${fmt(q1)} / ${fmt(q3)}${refLine}`, event))
+        .on("mouseleave", hideTooltip);
+
+    drawWhiskers(g, cx, boxWidth / 2, yShare, { lo, q1, q3, hi });
+    g.append("rect").attr("x", x).attr("y", yShare(q3)).attr("height", Math.max(1, yShare(q1) - yShare(q3)))
+        .attr("width", boxWidth).attr("fill", fill).attr("opacity", 0.7).attr("stroke", "#000");
+    g.append("line").attr("x1", x).attr("x2", x + boxWidth).attr("y1", yShare(median)).attr("y2", yShare(median))
+        .attr("stroke", "#000").attr("stroke-width", 2);
+    drawOutliers(panel, rows, shareMetric, cx, yShare, lo, hi, boxWidth * 0.6);
 }
 
 const COEF_SCALE_MAX = 0.3;
@@ -1375,13 +1508,8 @@ function renderPlayerVsWinnersBoxPlot(player) {
         `Box = ${label(metric)} dei vincitori MVP dell'era (n=${winnerVals.length}); ` +
         (hasPlayerVal
             ? `linea nera tratteggiata = <strong>${player.Player}</strong>. `
-            : `${label(metric)} non disponibile per <strong>${player.Player}</strong>. `) +
-        `<a id="reset-candidate-focus">↺ torna al confronto per era</a>`
+            : `${label(metric)} non disponibile per <strong>${player.Player}</strong>.`)
     );
-    d3.select("#reset-candidate-focus").on("click", (event) => {
-        event.preventDefault();
-        clearCandidateSelection();
-    });
 
     renderCardLegend("#boxplot-legend", [
         { type: "rect", fill: ERA_COLORS[era] || "#ccc", opacity: 0.6, stroke: "#000", text: `Vincitori MVP ${era} (box)` },
@@ -1409,18 +1537,14 @@ function renderPlayerVsWinnersBoxPlot(player) {
         const { q1, median, q3, lo, hi } = boxStats(winnerVals);
         const bx = xScale(era), bw = xScale.bandwidth();
 
-        svg.append("line").attr("x1", bx + bw / 2).attr("x2", bx + bw / 2)
-            .attr("y1", yScale(lo)).attr("y2", yScale(hi)).attr("stroke", "#000");
-        [lo, hi].forEach(v => svg.append("line")
-            .attr("x1", bx + bw / 4).attr("x2", bx + bw * 3 / 4)
-            .attr("y1", yScale(v)).attr("y2", yScale(v)).attr("stroke", "#000"));
+        drawWhiskers(svg, bx + bw / 2, bw / 2, yScale, { lo, q1, q3, hi });
         svg.append("rect").attr("x", bx).attr("y", yScale(q3))
             .attr("height", Math.max(1, yScale(q1) - yScale(q3))).attr("width", bw)
             .attr("fill", ERA_COLORS[era] || "#ccc").attr("opacity", 0.6).attr("stroke", "#000");
         svg.append("line").attr("x1", bx).attr("x2", bx + bw)
             .attr("y1", yScale(median)).attr("y2", yScale(median))
             .attr("stroke", "#000").attr("stroke-width", 2);
-        drawOutliers(svg, winners.filter(w => w[metric] !== null), metric, bx + bw / 2, yScale, lo, hi);
+        drawOutliers(svg, winners.filter(w => w[metric] !== null), metric, bx + bw / 2, yScale, lo, hi, bw * 0.6);
     }
 
     if (!hasPlayerVal) return;

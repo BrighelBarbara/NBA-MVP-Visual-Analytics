@@ -35,7 +35,7 @@ Da qui tre grandezze, per ogni candidato o stagione:
 | Grandezza | Definizione | Dove si vede |
 |---|---|---|
 | **Share attesa** | voto previsto dal modello | asse *Attesa* del PCP, Line Chart (vista iniziale) |
-| **Narrativa** | share reale − share attesa | colore del tratto Attesa → Reale nel PCP (viola = voto sopra l'atteso, arancione = sotto), barre divergenti della sidebar |
+| **Narrativa** | share reale − share attesa | colore del tratto Attesa → Reale nel PCP (viola = voto sopra l'atteso, arancione = sotto), barre divergenti della sidebar, 4° box del Box Plot (distribuzione nella selezione, §2ter) |
 | **Scelta statistica** | candidato con la share attesa più alta della stagione | linea tratteggiata nella Line Chart (distanza dalle ★ degli MVP reali), collegamento in PCA al click |
 
 Un **MVP controcorrente** è una stagione in cui ha vinto un candidato diverso
@@ -238,6 +238,63 @@ controcorrente "più rari e più piccoli".
 
 > Fig. 7 — `analysis/figures/fig7_robustezza_pie_ws.png`
 
+### 2ter. La narrativa nel Box Plot (4° box)
+
+Accanto ai tre box per era (statistica attiva, PIE di default) il Box Plot ha
+un **quarto box** con la distribuzione della **Narrativa = share reale −
+share attesa** dei candidati selezionati.
+
+**Scelte di progetto.**
+- **Un solo box per due share.** La richiesta era un boxplot che mostrasse la
+  share, che i tre box per era non mostrano. Share attesa e reale sono
+  sintetizzate in un **valore derivato**, la loro differenza (il boxplot stesso
+  è un "derived value", teoria p. 263; "deriving new values from the dataset
+  for ad-hoc visualization", p. 406). È un grafico di **deviazione** (p. 173):
+  la baseline è la share attesa, la linea dello 0 indica "votato quanto
+  previsto dalle statistiche".
+- **Asse proprio.** Unità diversa dalla statistica delle ere, quindi una vista
+  affiancata con scala indipendente, non un doppio asse sovrapposto ("shared
+  for comparability or independent for clarity", pratica P07, slide 9 e 19).
+- **Dominio fisso** sull'intero dataset (da −0,48 a +0,73): con i filtri si
+  sposta il box, non l'asse, così selezioni diverse restano confrontabili.
+- **Viste coordinate.** Il box si ricalcola a ogni brush (PCA, PCP) e filtro
+  per era. Con un filtro attivo, dietro resta il **box dell'intero dataset**
+  (solo contorno grigio, mediana tratteggiata): il sottoinsieme si legge
+  sempre rispetto al totale (multiple coordinated views, teoria pp. 322–325).
+- **Forma standard** (teoria pp. 263–264): quartili, baffi all'ultimo dato
+  entro 1,5×IQR, outlier in colonna sull'asse del box, affiancati solo se si
+  sovrapporrebbero.
+
+**Cosa mostra** (mediana; IQR; quota di candidati sopra lo 0):
+
+| Selezione | n | Mediana | IQR | Sopra lo 0 |
+|---|---|---|---|---|
+| Tutti i candidati | 354 | −0,037 | −0,145 / +0,116 | 42% |
+| Era Pre-Analytics | 113 | **+0,015** | −0,107 / +0,187 | 51% |
+| Era Transition | 153 | −0,039 | −0,139 / +0,099 | 42% |
+| Era Small-Ball | 88 | **−0,069** | −0,194 / +0,056 | 32% |
+| Guardie (PC1 < 0) | 213 | −0,016 | −0,116 / +0,128 | — |
+| Lunghi (PC1 ≥ 0) | 141 | **−0,080** | −0,164 / +0,081 | — |
+| Alto volume offensivo (PC2 > 1) | 118 | −0,010 | **−0,193 / +0,231** | 49% |
+| Basso volume (PC2 < −1) | 111 | −0,016 | −0,100 / +0,073 | 47% |
+| MVP reali | 27 | **+0,318** | +0,259 / +0,512 | 100% |
+
+**Lettura.**
+- **Ere (conferma visiva degli Insight 1 e 2).** Con la sola share le tre ere
+  sembrano uguali (mediane 2–5%, perché ogni stagione distribuisce lo stesso
+  totale di punti). Con la narrativa la mediana scende da Pre-Analytics a
+  Small-Ball e la quota di candidati votati sopra le statistiche passa dal 51%
+  al 32%: il voto è sempre più ancorato al merito misurato.
+- **Ruolo (conferma dell'Insight 3).** Il box dei lunghi sta più in basso di
+  quello delle guardie (mediana −0,080 contro −0,016), coerente con le medie
+  dell'Insight 3 (+0,028 contro −0,042).
+- **Volume offensivo.** Per i candidati ad alto volume la mediana è circa 0 (il
+  modello prevede bene la loro share, attesa mediana 33%), ma l'IQR è il più
+  largo di tutti: tra i candidati "da MVP" la narrativa non sposta il voto in
+  media, **decide chi sale e chi scende**.
+- **MVP reali.** Tutti sopra lo 0 (mediana +0,32): effetto del modello lineare
+  su una variabile limitata, vedi Limite 2 (§5).
+
 ---
 
 ## 3. Figure per report e slide
@@ -268,6 +325,7 @@ mostra solo nella demo.
 | 3 | cliccando un MVP controcorrente, la linea tratteggiata lo collega a una scelta statistica più a destra (da lunghi a guardie) | PCA |
 | 4 | dopo il brush, i tratti Attesa → Reale diventano arancioni e cadono verso lo 0 | PCP |
 | caso Nash | linea tratteggiata da Nash a Duncan; nella sidebar la ★ di Nash lontana dall'anello della scelta statistica | PCA + sidebar |
+| 2ter | filtrando le ere una alla volta, la mediana del 4° box (narrativa) passa da sopra a sotto quella del box grigio di riferimento, da Pre-Analytics a Small-Ball; con il brush sui lunghi il box sta più in basso che sulle guardie | Box Plot (4° box) |
 
 **S1 — Quando il voto è andato contro le statistiche (Insight 1)**
 - [ ] All'apertura, Line Chart: ★ = share attesa dell'MVP reale, tratteggio =
@@ -296,6 +354,17 @@ mostra solo nella demo.
 - [ ] Click sul box *Small-Ball*: nessun MVP controcorrente nell'era, e le
       stelle evidenziate stanno a destra o sulla linea PC1 = 0 (Giannis ×2,
       Jokic ×2, Embiid); in *Transition* quasi tutte stavano a sinistra.
+
+**S2ter — La narrativa nel 4° box (§2ter)**
+- [ ] Senza filtri: il 4° box (narrativa) ha la mediana poco sotto lo 0 e
+      gli MVP come outlier in alto.
+- [ ] Click sui box *Pre-Analytics*, poi *Small-Ball*: il 4° box si colora
+      dell'era; in Pre-Analytics la mediana sta sopra quella del contorno
+      grigio (intero dataset), in Small-Ball sotto.
+- [ ] PCA: brush su PC1 > 0 (lunghi), poi su PC1 < 0 (guardie): il box dei
+      lunghi sta più in basso.
+- [ ] PCA: brush in alto (PC2 > 1): mediana vicino allo 0 ma box molto più
+      largo del riferimento, cioè narrativa che decide tra i candidati forti.
 
 **S3 — La soglia del 55% (Insight 4)**
 - [ ] PCP: brush su PIE ≥ 0,17 e su W% ≤ 0,55.
@@ -340,3 +409,9 @@ mostra solo nella demo.
    media dei vincitori dopo il 2011 (0,46 → 0,59) **non** è significativa da
    sola (Mann-Whitney p = 0,18), quindi l'Insight 1 si basa sulla presenza o
    assenza di MVP controcorrente, non su quella media.
+6. **Narrativa per era nel 4° box: lettura descrittiva.** La narrativa è
+   calcolata con il modello globale (stessi coefficienti per tutte le ere).
+   Lo spostamento del box tra le ere riflette anche il cambiamento dei pesi
+   dell'Insight 2 e non è accompagnato da un test di significatività: va
+   presentato come conferma visiva degli Insight 1–3, non come insight
+   indipendente.
