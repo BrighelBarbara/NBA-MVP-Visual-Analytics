@@ -12,7 +12,6 @@
     <header class="navbar">
         <h1>🏀 NBA MVP Visual Analytics Explorer (1996–2023)</h1>
         <p class="subtitle">L'MVP premia il merito o la narrativa? Ogni selezione ristima come hanno votato i giornalisti.</p>
-        <div id="global-legend" class="legend global-legend"></div>
     </header>
 
     <div class="dashboard-grid">
@@ -31,24 +30,34 @@
             <div id="pcp-plot" class="chart"></div>
         </section>
 
-        <aside class="card" id="sidebar-card">
-            <h2>Analytics</h2>
-            <div id="selected-player-info" class="info-box">
-                <p><em>Clicca un candidato (PCA, PCP o liste qui sotto) per vedere voto reale vs atteso e la scelta statistica della sua stagione.</em></p>
-            </div>
+        <div class="right-rail">
+            <section class="card analytics-legend">
+                <h2>Legend</h2>
+                <div class="legend-section">
+                    <h3>ERE NBA</h3>
+                    <div id="era-legend" class="legend global-legend"></div>
+                </div>
+                <div class="legend-section">
+                    <h3>SYMBOLS</h3>
+                    <div id="symbol-legend" class="legend global-legend"></div>
+                </div>
+            </section>
 
-            <h3 id="model-title">Come vota la selezione</h3>
-            <div id="model-panel"></div>
+            <aside class="card" id="sidebar-card">
+                <h2>Analytic</h2>
+                <div id="selected-player-info" class="info-box">
+                    <p><em>Clicca un candidato (PCA, PCP o liste qui sotto) per vedere voto reale vs atteso e la scelta statistica della sua stagione.</em></p>
+                </div>
 
-            <h3>Premiati e snobbati dalla narrativa</h3>
-            <div id="narrative-panel" class="narrative-panel"></div>
+                <h3 id="model-title">Come vota la selezione</h3>
+                <div id="model-panel"></div>
 
-            <h3 id="top-mvp-title">Top 5 MVP Score</h3>
-            <ol id="top-mvp-list" class="ranking-list"></ol>
-            <p id="score-weights" class="score-note"></p>
+                <h3>Premiati e snobbati dalla narrativa</h3>
+                <div id="narrative-panel" class="narrative-panel"></div>
 
-            <a id="reset-all-filters" class="reset-link" href="#" style="display:none" title="Azzera brush, filtro per era e candidato selezionato (Esc)">↺ azzera tutti i filtri (Esc)</a>
-        </aside>
+                <a id="reset-all-filters" class="reset-link" href="#" style="display:none" title="Azzera brush, filtro per era e candidato selezionato (Esc)">↺ azzera tutti i filtri (Esc)</a>
+            </aside>
+        </div>
 
         <section class="card" id="line-card">
             <h2 id="linechart-title">Share attesa: MVP reale vs scelta statistica</h2>

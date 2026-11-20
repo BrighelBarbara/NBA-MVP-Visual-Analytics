@@ -44,8 +44,6 @@ let seasonsSorted = [];
 let seasonInfo = {};
 let globalVoteModel = null;
 
-let MVP_SCORE_WEIGHTS = {};
-
 const keyOf = d => `${d.Player}_${d.Season}`;
 const fmtPct = v => `${(v * 100).toFixed(0)}%`;
 const fmtPctPrecise = v => `${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%`;
@@ -95,16 +93,12 @@ Promise.all([
     insightsData = insights;
     pcaMeta = meta;
     leagueAverages = league.seasons;
-    MVP_SCORE_WEIGHTS = Object.fromEntries(
-        Object.entries(insights.mvp_score_weights.weights).filter(([, w]) => w > 0));
-
     prepareVoteModel(insights.vote_model);
 
     renderLegend();
     setupExpandableCards();
     setupDeselectOnEmptyClick();
     renderAllCharts();
-    renderScoreWeightsNote(insights.mvp_score_weights);
     d3.select("#reset-all-filters").on("click", (event) => {
         event.preventDefault();
         resetAllFilters();
@@ -313,7 +307,6 @@ function applyFilters() {
     renderBoxPlot(selected);
     renderModelPanel(selected, active);
     renderNarrativePanel(selected);
-    computeDynamicMVPScore(selected, active);
     updateResetLink();
 }
 
@@ -361,7 +354,10 @@ function renderCardLegend(target, items) {
     legend.selectAll("*").remove();
     items.forEach(item => {
         if (item.type === "eras") {
-            legend.append("span").attr("class", "legend-heading legend-shared").text("Era:");
+            if (item.heading !== false) {
+                legend.append("span").attr("class", "legend-heading legend-shared")
+                    .text(typeof item.heading === "string" ? item.heading : "Era:");
+            }
             ERAS.forEach(era => {
                 const el = legend.append("div")
                     .attr("class", "legend-item legend-shared")
@@ -418,12 +414,13 @@ function renderCardLegend(target, items) {
     });
 }
 
-// Voci comuni a tutti i grafici: mostrate una volta nella legenda globale in alto;
-// nelle card hanno classe .legend-shared e compaiono solo a grafico espanso.
+// Voci comuni mostrate nella sidebar; nelle card compaiono solo a grafico espanso.
 function renderLegend() {
-    renderCardLegend("#global-legend", [
-        { type: "eras" },
-        { type: "star", text: "MVP reale", stroke: "#000", radius: 10 },
+    renderCardLegend("#era-legend", [
+        { type: "eras", heading: false },
+    ]);
+    renderCardLegend("#symbol-legend", [
+        { type: "star", text: "MVP reale", stroke: "#000", radius: 8 },
     ]);
     renderCardLegend("#pca-legend", [
         { type: "eras" },
@@ -1316,62 +1313,6 @@ function renderNarrativePanel(selected) {
     });
     panel.append("p").attr("class", "legend-note")
         .html(`<span class="pos">■</span> voto sopra le statistiche · <span class="neg">■</span> sotto · ★ MVP · ↺ MVP l'anno prima`);
-}
-
-function computeDynamicMVPScore(selectedPlayers, isFiltered) {
-    const n = selectedPlayers.length;
-    const listOl = d3.select("#top-mvp-list");
-    listOl.selectAll("*").remove();
-    d3.select("#top-mvp-title").text(isFiltered ? `Top 5 MVP Score (selezione)` : `Top 5 MVP Score (tutti)`);
-    if (n === 0) return;
-
-    const metrics = Object.keys(MVP_SCORE_WEIGHTS);
-    const weights = MVP_SCORE_WEIGHTS;
-
-    const stats = {};
-    metrics.forEach(m => {
-        const vals = selectedPlayers.map(p => p[m]);
-        const mean = d3.mean(vals) || 0;
-        const std = d3.deviation(vals) || 1;
-        stats[m] = { mean, std };
-    });
-
-    selectedPlayers.forEach(p => {
-
-        let score = 0;
-        let usedWeight = 0;
-        metrics.forEach(m => {
-            if (p[m] === null || p[m] === undefined) return;
-            const z = (p[m] - stats[m].mean) / stats[m].std;
-            score += weights[m] * z;
-            usedWeight += weights[m];
-        });
-        p.dynamic_score = usedWeight > 0 ? score / usedWeight : 0;
-    });
-
-    const ranked = [...selectedPlayers].sort((a, b) => b.dynamic_score - a.dynamic_score).slice(0, 5);
-    const w = listOl.node().getBoundingClientRect().width || 260;
-    const labelW = 104, rowH = 14, barW = w - labelW - 4;
-    const x = d3.scaleLinear().domain([0, Math.max(2.5, d3.max(ranked, p => p.dynamic_score))]).range([0, barW]);
-    const svg = listOl.append("svg").attr("width", w).attr("height", ranked.length * rowH + 2);
-    ranked.forEach((p, i) => {
-        const g = svg.append("g").attr("class", "narrative-row").attr("transform", `translate(0,${i * rowH})`)
-            .on("click", () => toggleCandidate(p));
-        g.append("rect").attr("class", "row-hit").attr("width", w).attr("height", rowH);
-        g.append("text").attr("class", "model-label").attr("x", 0).attr("y", 10)
-            .text(`${p.Player.split(" ").pop()} ${p.Season.slice(2)}${p.Is_MVP_Winner === 1 ? " ★" : ""}`);
-        g.append("rect").attr("x", labelW).attr("y", 2).attr("height", 9).attr("rx", 1.5)
-            .attr("width", x(Math.max(0, p.dynamic_score))).attr("fill", ERA_COLORS[p.Tactical_Era]);
-        g.append("title").text(`${p.Player} ${p.Season}: MVP Score ${p.dynamic_score.toFixed(2)}`);
-    });
-}
-
-function renderScoreWeightsNote(scoreModel) {
-    const parts = Object.entries(MVP_SCORE_WEIGHTS)
-        .sort((a, b) => b[1] - a[1])
-        .map(([m, w]) => `${label(m)} ${(w * 100).toFixed(0)}%`);
-    d3.select("#score-weights").html(
-        `Media pesata degli z-score sulla selezione; pesi stimati (Ridge non negativa, R²=${scoreModel.r2}): ${parts.join(" · ")}.`);
 }
 
 let selectedCandidateKey = null;

@@ -42,7 +42,7 @@ body {
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 300px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 280px;
     grid-template-rows: minmax(0, 1.2fr) minmax(0, 1fr);
     gap: 10px;
 }
@@ -92,7 +92,20 @@ body {
 
 #pca-card { grid-column: 1 / 2; grid-row: 1 / 2; }
 #pcp-card { grid-column: 2 / 3; grid-row: 1 / 2; }
-#sidebar-card { grid-column: 3 / 4; grid-row: 1 / 3; font-size: 0.78rem; }
+.right-rail {
+    grid-column: 3 / 4;
+    grid-row: 1 / 3;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 10px;
+    min-height: 0;
+}
+
+#sidebar-card {
+    min-height: 0;
+    overflow-y: auto;
+    font-size: 0.78rem;
+}
 #line-card { grid-column: 1 / 2; grid-row: 2 / 3; }
 #boxplot-card { grid-column: 2 / 3; grid-row: 2 / 3; }
 
@@ -345,20 +358,61 @@ svg text {
     display: flex;
 }
 
-.global-legend {
-    margin: 0 0 0 auto;
-    align-self: center;
-    font-size: 0.76rem;
-    color: #ecf0f1;
+.analytics-legend .global-legend {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 2px;
+    margin: 4px 0 0;
+    font-size: 0.82rem;
+    color: #333;
 }
 
-.global-legend .legend-heading {
-    color: #bdc3c7;
+.analytics-legend .legend-section + .legend-section {
+    border-top: 1px solid #ecf0f1;
+    margin-top: 6px;
+    padding-top: 4px;
 }
 
-.global-legend .legend-item.active {
-    border-color: #ecf0f1;
-    background: rgba(255, 255, 255, 0.15);
+.analytics-legend .legend-section h3 {
+    margin: 4px 0 2px;
+    padding: 0;
+    border: 0;
+    color: #555;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+}
+
+.analytics-legend .legend-shared {
+    display: flex;
+}
+
+.analytics-legend .legend-heading {
+    align-self: flex-start;
+    margin-top: 2px;
+    color: #555;
+}
+
+.analytics-legend .legend-item {
+    display: grid;
+    grid-template-columns: 25px minmax(0, 1fr);
+    column-gap: 5px;
+    min-height: 26px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+}
+
+.analytics-legend .legend-item.active {
+    border-color: #1a252f;
+    background: #ecf0f1;
+}
+
+.analytics-legend .legend-swatch {
+    width: 14px;
+    height: 14px;
+    justify-self: center;
 }
 
 .legend-swatch {
@@ -486,25 +540,6 @@ svg text {
 
 .narrative-row:hover {
     background: #ecf0f1;
-}
-
-.ranking-list {
-    margin-left: 18px;
-}
-
-.ranking-list li {
-    cursor: pointer;
-}
-
-.ranking-list li:hover {
-    text-decoration: underline;
-}
-
-.score-note {
-    margin-top: 3px;
-    font-size: 0.66rem;
-    color: #7f8c8d;
-    line-height: 1.3;
 }
 
 .reset-link {
