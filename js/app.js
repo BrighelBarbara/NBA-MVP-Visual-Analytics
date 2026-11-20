@@ -420,7 +420,11 @@ function renderLegend() {
         { type: "eras", heading: false },
     ]);
     renderCardLegend("#symbol-legend", [
-        { type: "star", text: "MVP reale", stroke: "#000", radius: 8 },
+        { type: "star", text: "MVP reale", stroke: "#000", radius: 6 },
+    ]);
+    renderCardLegend("#vote-legend", [
+        { type: "circle", text: "Sotto le aspettative", fill: RESIDUAL_COLORS.negative, radius: 5 },
+        { type: "circle", text: "Sopra le aspettative", fill: RESIDUAL_COLORS.positive, radius: 5 },
     ]);
     renderCardLegend("#pca-legend", [
         { type: "eras" },

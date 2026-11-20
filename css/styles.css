@@ -12,7 +12,7 @@ html, body {
 body {
     background-color: #f4f6f9;
     color: #333;
-    padding: 10px 12px;
+    padding: 10px 12px 0;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -21,7 +21,7 @@ body {
 .navbar {
     background: #1a252f;
     color: white;
-    padding: 8px 16px;
+    padding: 6px 16px;
     border-radius: 8px;
     display: flex;
     align-items: baseline;
@@ -97,14 +97,18 @@ body {
     grid-row: 1 / 3;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
-    gap: 10px;
+    gap: 8px;
     min-height: 0;
 }
 
 #sidebar-card {
     min-height: 0;
-    overflow-y: auto;
+    padding: 6px 10px;
     font-size: 0.78rem;
+}
+#sidebar-card h3 {
+    margin: 3px 0 1px;
+    padding-top: 2px;
 }
 #line-card { grid-column: 1 / 2; grid-row: 2 / 3; }
 #boxplot-card { grid-column: 2 / 3; grid-row: 2 / 3; }
@@ -358,29 +362,82 @@ svg text {
     display: flex;
 }
 
+.analytics-legend {
+    padding: 3px 8px;
+}
+
 .analytics-legend .global-legend {
     display: flex;
     flex-direction: column;
     flex-wrap: nowrap;
     align-items: stretch;
-    gap: 2px;
-    margin: 4px 0 0;
+    gap: 0;
+    margin: 0;
     font-size: 0.82rem;
     color: #333;
 }
 
+.analytics-legend .legend-item {
+    display: grid;
+    grid-template-columns: 25px minmax(0, 1fr);
+    column-gap: 5px;
+    padding: 1px 4px;
+    font-size: 0.78rem;
+}
+
+.analytics-legend .legend-item svg {
+    flex: 0 0 auto;
+}
+
+.analytics-legend #era-legend {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 4px;
+}
+
+.analytics-legend #era-legend .legend-item {
+    display: flex;
+    column-gap: 5px;
+    min-height: 18px;
+    padding: 0 2px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+
+.analytics-legend #symbol-legend .legend-item {
+    min-height: 19px;
+    padding: 0 2px;
+}
+
+.analytics-legend #vote-legend {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 4px;
+}
+
+.analytics-legend #vote-legend .legend-item {
+    display: flex;
+    column-gap: 2px;
+    min-height: 20px;
+    padding: 0 2px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    align-items: center;
+}
+
 .analytics-legend .legend-section + .legend-section {
     border-top: 1px solid #ecf0f1;
-    margin-top: 6px;
-    padding-top: 4px;
+    margin-top: 2px;
+    padding-top: 1px;
 }
 
 .analytics-legend .legend-section h3 {
-    margin: 4px 0 2px;
+    margin: 0;
     padding: 0;
     border: 0;
     color: #555;
-    font-size: 0.72rem;
+    font-size: 0.78rem;
     letter-spacing: 0.04em;
 }
 
@@ -395,13 +452,7 @@ svg text {
 }
 
 .analytics-legend .legend-item {
-    display: grid;
-    grid-template-columns: 25px minmax(0, 1fr);
-    column-gap: 5px;
-    min-height: 26px;
-    padding: 1px 6px;
     border-radius: 6px;
-    font-size: 0.82rem;
 }
 
 .analytics-legend .legend-item.active {
@@ -410,9 +461,8 @@ svg text {
 }
 
 .analytics-legend .legend-swatch {
-    width: 14px;
-    height: 14px;
-    justify-self: center;
+    width: 11px;
+    height: 11px;
 }
 
 .legend-swatch {
@@ -426,7 +476,7 @@ svg text {
 .info-box {
     position: relative;
     background: #ecf0f1;
-    padding: 7px 9px;
+    padding: 4px 7px;
     border-radius: 6px;
     margin-top: 4px;
     line-height: 1.4;
