@@ -1,11 +1,11 @@
-/* Palette d3, un significato per variabile; valori reimpostati da js/app.js. */
+/* d3 palette, one meaning per variable; values reset from js/app.js. */
 :root {
-    --c-select: #000000;     /* candidato selezionato */
-    --c-mvp: #525252;        /* serie MVP reale */
-    --c-context: #737373;    /* altri candidati della stagione */
-    --c-choice: #969696;     /* scelta statistica / media di lega */
-    --c-all: #bdbdbd;        /* intero dataset (riferimento) */
-    --c-selection: #76b7b2;  /* selezione corrente */
+    --c-select: #000000;     /* selected candidate */
+    --c-mvp: #525252;        /* actual MVP series */
+    --c-context: #737373;    /* other candidates of the season */
+    --c-choice: #969696;     /* statistical pick / league average */
+    --c-all: #bdbdbd;        /* full dataset (reference) */
+    --c-selection: #76b7b2;  /* current selection */
     --c-ink: #252525;
     --c-text-muted: #525252;
     --c-grid: #d9d9d9;
@@ -241,7 +241,7 @@ svg text {
     stroke-dasharray: 4;
 }
 
-/* Brush della timeline: sceglie stagioni, non candidati, quindi grigio e non teal. */
+/* Timeline brush: selects seasons, not candidates, so grey rather than teal. */
 #line-chart .brush .selection {
     fill: var(--c-ink);
     fill-opacity: 0.06;
@@ -609,7 +609,7 @@ svg text {
     pointer-events: none;
 }
 
-/* Altezza fissa: il testo della tendenza non cambia l'altezza del grafico. */
+/* Fixed height: the trend text does not change the chart height. */
 .trend-readout {
     height: 2.8em;
     margin-top: 2px;
@@ -627,12 +627,6 @@ svg text {
 
 .trend-readout svg {
     vertical-align: middle;
-}
-
-.gap-line {
-    stroke: var(--c-choice);
-    stroke-width: 2px;
-    stroke-dasharray: 4,3;
 }
 
 .vote-seg {
@@ -655,8 +649,8 @@ svg text {
 .bar-track-line { stroke: var(--c-grid); stroke-width: 6px; stroke-linecap: round; }
 .dot-expected { fill: var(--c-white); stroke: var(--c-ink); stroke-width: 1.5px; }
 .dot-season { fill: var(--c-context); }
-.dot-choice { fill: none; stroke: var(--c-choice); stroke-width: 1.6px; }
 .tick-mini { font-size: 8.5px; fill: var(--c-text-muted); }
+.player-tag { font-size: 9px; font-weight: 700; fill: var(--c-select); paint-order: stroke; stroke: var(--c-bg); stroke-width: 3px; }
 .row-hit { fill: transparent; }
 g.narrative-row { cursor: pointer; }
 g.narrative-row:hover .row-hit { fill: var(--c-bg); }

@@ -427,10 +427,10 @@ Esempio (brush su PC1 < 0, profilo da guardia): MVP guardie 3/9 in Pre-Analytics
 10/11 in Transition, 4/7 in Small-Ball. Le ★ sono cliccabili (dettaglio del candidato,
 coordinato con PCA, PCP, box plot e sidebar); anche la ★ del pannello candidato lo è.
 In aggiunta, la media della selezione per stagione è tornata come **punti teal senza
-linea**: l'area del punto è proporzionale al numero di candidati selezionati in quella
-stagione e le stagioni con meno di 2 candidati sono omesse. Una linea suggerirebbe una
-tendenza continua che, con campioni di 2-3 candidati, i dati non sostengono; i punti
-dimensionati per n rendono visibile quanto è affidabile ogni media (tooltip con valore e n).
+linea**, tutti della stessa dimensione; le stagioni con meno di 2 candidati selezionati sono
+omesse e il tooltip riporta valore e n. Una linea suggerirebbe una tendenza continua che,
+con campioni di 2-3 candidati, i dati non sostengono. Una prima versione codificava n con
+l'area del punto, ma richiedeva una legenda delle dimensioni in più: scartata per semplicità.
 
 ### Line chart: rette di tendenza (analytics attivata dal brush sulla timeline)
 - Ogni retta di regressione ha lo stile della serie a cui si riferisce (MVP continua,

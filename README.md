@@ -32,7 +32,7 @@ esattamente i file versionati.
 | 2 | `Visual Analytics/cleaning_dataset.py`: selezione e rinomina colonne | `Visual Analytics/mvp_candidates_cleaned.csv` |
 | 3 | `Visual Analytics/compute_pca.py`: PCA su 24 statistiche individuali standardizzate | `data/mvp_candidates_pca.csv`, `data/pca_meta.json` |
 | 4 | `data1/scripts/league_averages.py`: media di lega per stagione (riferimento della Line Chart) | `data/league_averages.json` |
-| 5 | `analysis/mvp_merit_analysis.py`: modello del voto, insight, pesi dell'MVP Score | `data/insights/insights.json` |
+| 5 | `analysis/mvp_merit_analysis.py`: modello del voto e insight | `data/insights/insights.json` |
 | 6 | `analysis/make_figures.py`: figure per report e slide | `analysis/figures/*.png` |
 
 ```
@@ -48,6 +48,6 @@ Dipendenze: `pandas`, `numpy`, `scikit-learn`, `unidecode`, `matplotlib`.
 
 ## Struttura
 
-- `index.html`, `js/app.js`, `css/styles.css`: dashboard D3.js v7.
+- `index.html`, `js/app.js`, `css/styles.css`: dashboard D3.js v7 (interfaccia in inglese).
 - `analysis/INSIGHTS_REPORT.md`: insight scoperti, metodo, scenari della demo e limiti.
 - `analysis/CHANGELOG.md`: storico tecnico delle modifiche.

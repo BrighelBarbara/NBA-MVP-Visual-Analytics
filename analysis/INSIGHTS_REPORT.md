@@ -13,6 +13,8 @@ La dashboard ricalcola dal vivo gli stessi modelli (stessi coefficienti,
 verificati: R² globale 0,459 sia in Python sia in `js/app.js`), quindi ogni
 insight qui sotto si **ritrova interagendo** con il sistema (§4, scenari della
 demo). Lo storico tecnico delle modifiche è in `analysis/CHANGELOG.md`.
+L'interfaccia della dashboard è in inglese: le etichette citate qui sono
+riportate come compaiono a schermo, in *corsivo*.
 
 ---
 
@@ -34,19 +36,25 @@ Da qui tre grandezze, per ogni candidato o stagione:
 
 | Grandezza | Definizione | Dove si vede |
 |---|---|---|
-| **Share attesa** | voto previsto dal modello | asse *Attesa* del PCP, Line Chart (vista iniziale) |
-| **Narrativa** | share reale − share attesa | colore del tratto Attesa → Reale nel PCP (viola = voto sopra l'atteso, arancione = sotto), barre divergenti della sidebar, 4° box del Box Plot (distribuzione nella selezione, §2ter) |
-| **Scelta statistica** | candidato con la share attesa più alta della stagione | linea tratteggiata nella Line Chart (distanza dalle ★ degli MVP reali), collegamento in PCA al click |
+| **Share attesa** (*Expected share*) | voto previsto dal modello | asse *Expected* del PCP, Line Chart (vista iniziale) |
+| **Narrativa** (*Narrative*) | share reale − share attesa | colore del tratto *Expected → Actual* nel PCP (viola = sopra l'atteso, arancione = sotto; legenda *Votes received*), lista *Largest gaps from expected vote* nella sidebar, pannello del giocatore (*"+36 points above expected"*), 4° box del Box Plot (§2ter) |
+| **Scelta statistica** (*Statistical pick*) | candidato con la share attesa più alta della stagione | linea tratteggiata nella Line Chart (distanza dalle ★ degli MVP reali), collegamento in PCA al click, verdetto nel pannello del giocatore |
 
 Un **MVP controcorrente** è una stagione in cui ha vinto un candidato diverso
 dalla scelta statistica, con uno scarto di share attesa ≥ 0,15. Sotto questa
-soglia il caso è trattato come un quasi pari merito.
+soglia il caso è trattato come un quasi pari merito. Nel pannello del
+giocatore il verdetto corrispondente è *"MVP over the statistical pick"*;
+il caso opposto (scelta statistica che non vince) è *"Statistical pick, not
+elected"*.
 
 **Analytics innescata dall'interazione.** Ogni brush (PCA, assi del PCP) o
 filtro per era (click su un box del Box Plot) **ristima il modello del voto sulla sola
-selezione**. Il risultato è disegnato nella sidebar di approfondimento come
-barre "selezione" (pesi, R², quota di voti quasi nulli) con la tacca del
-modello su tutti i candidati.
+selezione**. Il risultato è nel pannello *How the selection is voted* della
+sidebar: quattro barre per la selezione (*Merit weight (PIE)*, *Team weight
+(W%)*, *Fit to stats (R²)*, *Vote share < 10%*) con la tacca del modello su
+tutti i candidati. Un secondo calcolo è attivato dal brush sulla timeline
+della Line Chart: una regressione lineare sul periodo selezionato, con
+pendenza e R² sotto il grafico (*"weak trend"* se R² < 0,3).
 
 ---
 
@@ -112,8 +120,9 @@ della stagione.
 
 È l'insight che collega la PCA alla domanda del progetto. PC1 separa i
 profili da **guardia/esterno** (PC1 < 0: assist, tiro da 3, contropiede) da
-quelli da **lungo** (PC1 > 0: rimbalzi, stoppate). Disegnando nella PCA una
-freccia dalla scelta statistica all'MVP reale per ogni MVP controcorrente:
+quelli da **lungo** (PC1 > 0: rimbalzi, stoppate). Collegando nella PCA la
+scelta statistica all'MVP reale per ogni MVP controcorrente (frecce in Fig. 6;
+nella dashboard, linea tratteggiata al click su un candidato):
 
 | Stagione | Scelta statistica (PC1) | → MVP reale (PC1) |
 |---|---|---|
@@ -167,9 +176,10 @@ L'ipotesi iniziale (soglia al 60–65%, nata da 4 casi aneddotici: Garnett,
 Nowitzki, Nash, Curry) è stata **corretta** dalla verifica sul campione
 completo: il fenomeno era giusto, il punto di rottura no. Nella dashboard si
 vede filtrando nel PCP i candidati con PIE alto e record sotto il 55%: i tratti
-Attesa → Reale diventano quasi tutti arancioni e cadono verso lo 0, e nel modello
-ristimato su questo gruppo la barra del peso del merito sparisce (conta solo il
-record di squadra).
+*Expected → Actual* diventano quasi tutti arancioni e cadono verso lo 0, e nel
+modello ristimato su questo gruppo (n = 21) la barra *Merit weight* sparisce
+(0,009 contro 0,165 su tutti), *Fit to stats* scende a 0,06 e *Vote share <
+10%* sale all'86%: conta solo il record di squadra.
 
 > Fig. 3 — `analysis/figures/fig3_soglia_record_squadra.png`
 
@@ -196,7 +206,7 @@ solido di voto guidato dalla reputazione.
 
 ### Insight 6 — Due stelle nella stessa squadra si dividono (e perdono) il voto
 
-Il candidato più snobbato del dataset è **Kevin Durant 2016-17** (narrativa
+Il candidato con la narrativa più negativa del dataset è **Kevin Durant 2016-17** (narrativa
 −0,48, share 0,2%): è la stagione del suo arrivo ai Warriors. Nella stessa
 stagione anche il voto di Curry, MVP uscente all'unanimità, crolla (share
 1,00 → 0,05, narrativa −0,20). Il divario di utilizzo offensivo tra Curry e il
@@ -313,7 +323,7 @@ share attesa** dei candidati selezionati.
 
 ## 4. Scenari della demo (checklist)
 
-Ogni scenario parte da "↺ azzera tutti i filtri". Ogni grafico porta **un
+Ogni scenario parte da *"↺ clear all filters"* (o `Esc`). Ogni grafico porta **un
 solo messaggio**; la sidebar è il pannello di approfondimento (dettagli e
 valori). Nelle slide vanno obiettivo, dati e visualizzazioni; l'interazione si
 mostra solo nella demo.
@@ -321,10 +331,10 @@ mostra solo nella demo.
 | Insight | Prova visiva | Grafico |
 |---|---|---|
 | 1 | distanza grande tra ★ (MVP reale) e tratteggio (scelta statistica) solo tra il 1997 e il 2011 | Line Chart (vista iniziale) |
-| 2 | filtrando un'era alla volta, nella sidebar la barra del peso del merito si allunga da Pre-Analytics a Small-Ball, quella del record resta uguale | Box Plot + sidebar |
-| 3 | cliccando un MVP controcorrente, la linea tratteggiata lo collega a una scelta statistica più a destra (da lunghi a guardie) | PCA |
-| 4 | dopo il brush, i tratti Attesa → Reale diventano arancioni e cadono verso lo 0 | PCP |
-| caso Nash | linea tratteggiata da Nash a Duncan; nella sidebar la ★ di Nash lontana dall'anello della scelta statistica | PCA + sidebar |
+| 2 | filtrando un'era alla volta, nella sidebar la barra *Merit weight* si allunga da Pre-Analytics a Small-Ball, *Team weight* resta uguale | Box Plot + sidebar |
+| 3 | cliccando un MVP controcorrente, la linea tratteggiata lo collega a una scelta statistica più a destra (da lunghi a guardie); con il brush sulle guardie le ★ piene della Line Chart si concentrano nell'era Transition | PCA + Line Chart |
+| 4 | dopo il brush, i tratti *Expected → Actual* diventano arancioni e cadono verso lo 0 | PCP + sidebar |
+| caso Nash | linea tratteggiata da Nash a Duncan; nel pannello del giocatore *"+65 points above expected"* e il verdetto *MVP over the statistical pick (Tim Duncan)* | PCA + sidebar |
 | 2ter | filtrando le ere una alla volta, la mediana del 4° box (narrativa) passa da sopra a sotto quella del box grigio di riferimento, da Pre-Analytics a Small-Ball; con il brush sui lunghi il box sta più in basso che sulle guardie | Box Plot (4° box) |
 
 **S1 — Quando il voto è andato contro le statistiche (Insight 1)**
@@ -332,13 +342,16 @@ mostra solo nella demo.
       scelta statistica. I 6 scarti grandi tra ★ e tratteggio stanno tutti
       prima del 2011-12; dopo, ★ e tratteggio coincidono.
 - [ ] Click su Nash 2004-05 nella PCA (stella in basso a sinistra): la PCA lo
-      collega a Duncan; nella sidebar la stella di Nash è lontana a sinistra
-      dell'anello della scelta statistica.
+      collega a Duncan; nel pannello del giocatore la riga *vote* va da 19% a
+      84% (*"+65 points above expected"*) e nella riga *season, expected* la ★
+      di Nash sta a sinistra di molti altri candidati della stagione.
 
 **S2 — Come votano le ere (Insight 2)**
-- [ ] Click sul box di ogni era, una alla volta: nella sidebar ("Come vota
-      la selezione") da Pre-Analytics a Small-Ball la barra del peso del
-      merito si allunga, quella del record no (valori nel tooltip).
+- [ ] Click sul box di ogni era, una alla volta: nella sidebar (*How the
+      selection is voted*) da Pre-Analytics a Small-Ball la barra *Merit
+      weight* si allunga (0,13 → 0,18 → 0,22) e *Fit to stats (R²)* sale
+      (0,39 → 0,50 → 0,59); *Team weight* resta circa uguale (valori nel
+      tooltip).
 - [ ] Click sul box *Small-Ball* nel Box Plot: tutte le viste si filtrano;
       nella Line Chart, nelle stagioni dell'era ★ e tratteggio quasi
       coincidono.
@@ -354,13 +367,19 @@ mostra solo nella demo.
 - [ ] Click sul box *Small-Ball*: nessun MVP controcorrente nell'era, e le
       stelle evidenziate stanno a destra o sulla linea PC1 = 0 (Giannis ×2,
       Jokic ×2, Embiid); in *Transition* quasi tutte stavano a sinistra.
+- [ ] PCA: brush sulla metà sinistra (PC1 < 0, profilo da guardia). Nella
+      Line Chart restano piene solo le ★ degli MVP selezionati e il titolo
+      riporta *"MVPs in selection: 17/27"*: MVP guardie 3/9 in Pre-Analytics,
+      10/11 in Transition, 4/7 in Small-Ball. Brush sulla metà destra (lunghi)
+      per il quadro opposto.
 
 **S2ter — La narrativa nel 4° box (§2ter)**
 - [ ] Senza filtri: il 4° box (narrativa) ha la mediana poco sotto lo 0 e
       gli MVP come outlier in alto.
-- [ ] Click sui box *Pre-Analytics*, poi *Small-Ball*: il 4° box si colora
-      dell'era; in Pre-Analytics la mediana sta sopra quella del contorno
-      grigio (intero dataset), in Small-Ball sotto.
+- [ ] Click sui box *Pre-Analytics*, poi *Small-Ball*: il 4° box (teal =
+      selezione) riporta il nome dell'era sotto l'asse; in Pre-Analytics la
+      mediana sta sopra quella del contorno grigio (*Full dataset*), in
+      Small-Ball sotto.
 - [ ] PCA: brush su PC1 > 0 (lunghi), poi su PC1 < 0 (guardie): il box dei
       lunghi sta più in basso.
 - [ ] PCA: brush in alto (PC2 > 1): mediana vicino allo 0 ma box molto più
@@ -368,22 +387,28 @@ mostra solo nella demo.
 
 **S3 — La soglia del 55% (Insight 4)**
 - [ ] PCP: brush su PIE ≥ 0,17 e su W% ≤ 0,55.
-- [ ] I tratti Attesa → Reale sono quasi tutti arancioni e cadono a 0; nella
-      sidebar la barra "Voto ≈ 0" supera la tacca di tutti i candidati.
+- [ ] I tratti *Expected → Actual* sono quasi tutti arancioni e cadono a 0;
+      nella sidebar *Merit weight* è quasi nullo (0,009), *Fit to stats (R²)*
+      scende a 0,06 e *Vote share < 10%* (86%) supera la tacca di tutti i
+      candidati (63%).
 
 **S4 — Chi ha preso più voti delle sue statistiche (Insight 1 e 5)**
-- [ ] Sidebar, barre viola: Iverson 00-01, Rose 10-11, Bryant 07-08, tutti MVP
-      controcorrente. Click su uno: nel PCP il suo tratto Attesa → Reale sale
-      ripido.
-- [ ] PCP: brush sull'asse *Reale* sopra 0,7 → restano quasi solo MVP, con
+- [ ] Sidebar, lista *Largest gaps from expected vote*, barre viola: Iverson
+      00-01, Rose 10-11, Bryant 07-08, tutti MVP controcorrente. Click su uno:
+      nel PCP il suo tratto *Expected → Actual* sale ripido.
+- [ ] PCP: brush sull'asse *Actual* sopra 0,7 → restano quasi solo MVP, con
       tratti viola.
 
 **S5 — Il superteam (Insight 6)**
-- [ ] Sidebar, barre arancioni: Durant 16-17; click → atteso alto, reale ~0.
+- [ ] Sidebar, lista *Largest gaps from expected vote*, barre arancioni:
+      Durant 16-17; click → pannello del giocatore *"−48 points below
+      expected"*.
 
 **Facoltativo — regressione on demand**
 - [ ] Click sull'etichetta *PIE* nel PCP, poi brush sulla timeline 2011–2023:
-      retta di tendenza di MVP e media di lega.
+      rette di tendenza di MVP (continua) e media di lega (tratteggiata);
+      pendenza per stagione e R² nelle due righe sotto il grafico, con
+      *"weak trend"* se R² < 0,3.
 
 ---
 
@@ -404,7 +429,9 @@ mostra solo nella demo.
    entrambe le stelle sono candidate (vero per Curry e Durant nel 2016-17; non
    per Westbrook e George nel 2017-18).
 5. **Campioni piccoli.** Con selezioni sotto i 25 candidati la dashboard
-   segnala che la stima è indicativa. Le differenze tra ere dell'Insight 2
+   schiarisce le barre del modello (*"light bars = small sample"*); sotto i 6
+   candidati il modello non viene stimato. Nella Line Chart la media della
+   selezione è mostrata solo per le stagioni con almeno 2 candidati. Le differenze tra ere dell'Insight 2
    sono accompagnate da intervalli bootstrap; la crescita della share attesa
    media dei vincitori dopo il 2011 (0,46 → 0,59) **non** è significativa da
    sola (Mann-Whitney p = 0,18), quindi l'Insight 1 si basa sulla presenza o

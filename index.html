@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,21 +11,21 @@
 <body>
     <header class="navbar">
         <h1>🏀 NBA MVP Visual Analytics Explorer (1996–2023)</h1>
-        <p class="subtitle">L'MVP premia il merito o la narrativa? Ogni selezione ristima come hanno votato i giornalisti.</p>
+        <p class="subtitle">Does the MVP reward merit or narrative? Every selection re-estimates how the media voted.</p>
     </header>
 
     <div class="dashboard-grid">
 
         <section class="card" id="pca-card">
             <h2>Spatial PCA Projection (PC1 vs PC2)</h2>
-            <p class="card-desc">Brush per selezionare · click su un punto per il dettaglio</p>
+            <p class="card-desc">Brush to select · click a point for details</p>
             <div id="pca-legend" class="legend"></div>
             <div id="pca-plot" class="chart"></div>
         </section>
 
         <section class="card" id="pcp-card">
-            <h2>Parallel Coordinates Plot: merito vs voto</h2>
-            <p class="card-desc">Ultimo tratto (fascia VOTO): voto atteso dalle statistiche → voto reale.</p>
+            <h2>Parallel Coordinates Plot: merit vs vote</h2>
+            <p class="card-desc">Last segment (VOTE band): vote expected from stats → actual vote.</p>
             <div id="pcp-legend" class="legend"></div>
             <div id="pcp-plot" class="chart"></div>
         </section>
@@ -34,45 +34,43 @@
             <section class="card analytics-legend">
                 <h2>Legend</h2>
                 <div class="legend-section">
-                    <h3>ERE NBA</h3>
+                    <h3>NBA ERAS</h3>
                     <div id="era-legend" class="legend global-legend"></div>
                 </div>
                 <div class="legend-section">
-                    <h3>SIMBOLI</h3>
+                    <h3>SYMBOLS</h3>
                     <div id="symbol-legend" class="legend global-legend"></div>
                 </div>
                 <div class="legend-section">
-                    <h3>VOTAZIONI OTTENUTE</h3>
+                    <h3>VOTES RECEIVED</h3>
                     <div id="vote-legend" class="legend global-legend"></div>
                 </div>
             </section>
 
             <aside class="card" id="sidebar-card">
-                <h2>Analytic</h2>
-                <div id="selected-player-info" class="info-box">
-                    <p><em>Clicca un candidato (PCA, PCP o liste qui sotto) per vedere voto reale vs atteso e la scelta statistica della sua stagione.</em></p>
-                </div>
+                <h2>Analytics</h2>
+                <div id="selected-player-info" class="info-box" hidden></div>
 
-                <h3 id="model-title">Come vota la selezione</h3>
+                <h3 id="model-title">How the selection is voted</h3>
                 <div id="model-panel"></div>
 
-                <h3>Premiati e snobbati dalla narrativa</h3>
+                <h3>Largest gaps from expected vote</h3>
                 <div id="narrative-panel" class="narrative-panel"></div>
 
-                <a id="reset-all-filters" class="reset-link" href="#" style="display:none" title="Azzera brush, filtro per era e candidato selezionato (Esc)">↺ azzera tutti i filtri (Esc)</a>
+                <a id="reset-all-filters" class="reset-link" href="#" style="display:none" title="Clear brushes, era filter and selected candidate (Esc)">↺ clear all filters (Esc)</a>
             </aside>
         </div>
 
         <section class="card" id="line-card">
-            <h2 id="linechart-title">Share attesa: MVP reale vs scelta statistica</h2>
-            <p class="card-desc" id="linechart-desc">Trascina sulla timeline per la tendenza · click su ★ per il dettaglio</p>
+            <h2 id="linechart-title">Expected share: actual MVP vs statistical pick</h2>
+            <p class="card-desc" id="linechart-desc">Drag on the timeline for the trend · click a ★ for details</p>
             <div id="line-legend" class="legend"></div>
             <div id="line-chart" class="chart"></div>
             <p id="line-trend" class="trend-readout"></p>
         </section>
 
         <section class="card" id="boxplot-card">
-            <h2 id="boxplot-title">PIE per era</h2>
+            <h2 id="boxplot-title">PIE by era</h2>
             <p class="card-desc" id="boxplot-desc"></p>
             <div id="boxplot-legend" class="legend"></div>
             <div id="boxplot-chart" class="chart"></div>

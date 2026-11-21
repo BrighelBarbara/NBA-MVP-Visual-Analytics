@@ -1,4 +1,4 @@
-// Colori: solo palette d3, un significato per colore. Ere = Tableau10 (categorica).
+// Colors: d3 palettes only, one meaning per color. Eras = Tableau10 (categorical).
 const ERA_COLORS = {
     "Pre-Analytics": d3.schemeTableau10[0],
     "Transition": d3.schemeTableau10[4],
@@ -6,24 +6,24 @@ const ERA_COLORS = {
 };
 const ERAS = Object.keys(ERA_COLORS);
 
-// Narrativa (voto reale − atteso): PuOr divergente, viola = sopra l'atteso, arancione = sotto.
+// Narrative (actual − expected vote): diverging PuOr, purple = above expected, orange = below.
 const RESIDUAL_COLORS = { positive: d3.schemePuOr[9][0], negative: d3.schemePuOr[9][8] };
 const RESIDUAL_COLORS_LIGHT = { positive: d3.schemePuOr[9][2], negative: d3.schemePuOr[9][6] };
 const residualColor = d => (d.Narrative >= 0 ? RESIDUAL_COLORS.positive : RESIDUAL_COLORS.negative);
 
-// Grigi d3.schemeGreys + selezione Tableau10; esposti al CSS come variabili --c-*.
+// d3.schemeGreys greys + Tableau10 selection color; exposed to CSS as --c-* variables.
 const GREYS = d3.schemeGreys[9];
 const COLORS = {
-    select: GREYS[8],                   // candidato selezionato
-    ink: GREYS[7],                      // testo, assi, bordi
-    mvp: GREYS[6],                      // serie MVP reale (line chart)
-    context: GREYS[5],                  // altri candidati della stagione
-    choice: GREYS[4],                   // scelta statistica / media di lega
-    all: GREYS[3],                      // intero dataset (riferimento)
-    grid: GREYS[2],                     // separatori (interfaccia)
-    bg: GREYS[1],                       // sfondi (interfaccia)
+    select: GREYS[8],                   // selected candidate
+    ink: GREYS[7],                      // text, axes, outlines
+    mvp: GREYS[6],                      // actual MVP series (line chart)
+    context: GREYS[5],                  // other candidates of the season
+    choice: GREYS[4],                   // statistical pick / league average
+    all: GREYS[3],                      // full dataset (reference)
+    grid: GREYS[2],                     // separators (UI)
+    bg: GREYS[1],                       // backgrounds (UI)
     white: GREYS[0],
-    selection: d3.schemeTableau10[3],   // selezione corrente (brush / filtri)
+    selection: d3.schemeTableau10[3],   // current selection (brush / filters)
 };
 const SELECT_COLOR = COLORS.select;
 
@@ -33,17 +33,17 @@ rootStyle.setProperty("--c-text-muted", GREYS[6]);
 
 const METRIC_LABELS = {
     PTS: "PTS", REB: "REB", AST: "AST", TS_PCT: "TS%", WS: "WS", PIE: "PIE",
-    Team_W_PCT: "Team W%", Expected_Share: "Share attesa", MVP_Share: "Share voto", Narrative: "Narrativa",
+    Team_W_PCT: "Team W%", Expected_Share: "Expected share", MVP_Share: "Vote share", Narrative: "Narrative",
 };
 const label = m => METRIC_LABELS[m] || m;
 const AXIS_TITLES = {
-    PTS: "Punti a partita (PTS)", REB: "Rimbalzi a partita (REB)", AST: "Assist a partita (AST)",
+    PTS: "Points per game (PTS)", REB: "Rebounds per game (REB)", AST: "Assists per game (AST)",
     TS_PCT: "True Shooting % (TS%)", WS: "Win Shares (WS)", PIE: "Player Impact Estimate (PIE)",
-    Team_W_PCT: "% vittorie della squadra", Expected_Share: "Share voto MVP attesa (modello)",
-    MVP_Share: "Share voto MVP reale", Narrative: "Narrativa (share reale − attesa)",
+    Team_W_PCT: "Team win %", Expected_Share: "Expected MVP vote share (model)",
+    MVP_Share: "Actual MVP vote share", Narrative: "Narrative (actual − expected share)",
 };
 const axisTitle = m => AXIS_TITLES[m] || label(m);
-const PCP_SHORT_LABELS = { Team_W_PCT: "W% squadra", Expected_Share: "Share attesa", MVP_Share: "Share reale" };
+const PCP_SHORT_LABELS = { Team_W_PCT: "Team W%", Expected_Share: "Expected", MVP_Share: "Actual" };
 const PCT_METRICS = ["MVP_Share", "Expected_Share", "Team_W_PCT", "TS_PCT"];
 
 let globalData = [];
@@ -57,7 +57,7 @@ let globalVoteModel = null;
 const keyOf = d => `${d.Player}_${d.Season}`;
 const fmtPct = v => `${(v * 100).toFixed(0)}%`;
 const fmtPctPrecise = v => `${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%`;
-// d3.symbolStar: raggio esterno = sqrt(size · STAR_KA).
+// d3.symbolStar: outer radius = sqrt(size · STAR_KA).
 const STAR_KA = 0.89081309152928522810;
 const fmtSigned = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}`;
 const swatch = (color, glyph) => `<span style="color:${color}">${glyph}</span>`;
@@ -91,8 +91,8 @@ Promise.all([
     });
 
     globalData = data;
-    // Dimensione per 5 classi di share: area proporzionale al centro della classe,
-    // soglie fisse sull'intero dataset (i filtri non cambiano le dimensioni).
+    // Size by 5 share classes: area proportional to the class midpoint,
+    // thresholds fixed on the full dataset (filters do not change sizes).
     const maxShare = d3.max(data, d => d.MVP_Share) || 1;
     const areaScale = d3.scaleSqrt().domain([0, maxShare]).range([0, SHARE_R_MAX]);
     const edges = [0, ...SHARE_BINS, maxShare];
@@ -124,7 +124,7 @@ Promise.all([
             renderAllCharts();
         }, 200);
     });
-}).catch(err => console.error("Errore nel caricamento dei dati:", err));
+}).catch(err => console.error("Error loading data:", err));
 
 function prepareVoteModel(vm) {
     const std = vm.standardization;
@@ -334,12 +334,11 @@ function renderCardLegend(target, items) {
         }
         if (item.type === "sizes") {
             legend.append("span").attr("class", "legend-heading").text(item.heading);
-            (item.radii || item.scale.range()).forEach((r, i) => {
+            item.scale.range().forEach((r, i) => {
                 const el = legend.append("div").attr("class", "legend-item");
                 el.append("svg").attr("width", 2 * r + 2).attr("height", 2 * r + 2)
                     .append("circle").attr("cx", r + 1).attr("cy", r + 1).attr("r", r)
-                    .attr("fill", item.fill || COLORS.white).attr("fill-opacity", item.fill ? 0.85 : 1)
-                    .attr("stroke", item.fill ? COLORS.white : COLORS.ink).attr("stroke-width", 0.8);
+                    .attr("fill", COLORS.white).attr("stroke", COLORS.ink).attr("stroke-width", 0.8);
                 el.append("span").text(item.labels[i]);
             });
             return;
@@ -383,39 +382,36 @@ function renderCardLegend(target, items) {
             if (item.cls) line.attr("class", item.cls);
             else line.attr("stroke", item.color).attr("stroke-width", item.width || 2)
                 .attr("stroke-dasharray", item.dash || null).attr("stroke-opacity", item.opacity ?? 1);
-            if (item.star) icon.append("path").attr("transform", "translate(10,7)")
-                .attr("d", d3.symbol().type(d3.symbolStar).size(30)())
-                .attr("fill", COLORS.white).attr("stroke", COLORS.ink).attr("stroke-width", 0.8);
         }
         el.append("span").text(item.text);
     });
 }
 
-// Voci comuni a tutti i grafici: mostrate solo nella legenda della sidebar.
+// Items shared by all charts: shown only in the sidebar legend.
 function renderLegend() {
     renderCardLegend("#era-legend", [
         { type: "eras", heading: false },
     ]);
     renderCardLegend("#symbol-legend", [
-        { type: "star", text: "MVP reale (colore = era)", radius: 6 },
-        { type: "circle", text: "Candidato selezionato", stroke: COLORS.select, strokeWidth: 2.5, radius: 5 },
-        { type: "rect", fill: COLORS.selection, opacity: 0.7, text: "Selezione corrente (brush / filtri)" },
+        { type: "star", text: "Actual MVP (color = era)", radius: 6 },
+        { type: "circle", text: "Selected candidate", stroke: COLORS.select, strokeWidth: 2.5, radius: 5 },
+        { type: "rect", fill: COLORS.selection, opacity: 0.7, text: "Current selection (brush / filters)" },
     ]);
     renderCardLegend("#vote-legend", [
-        { type: "circle", text: "Sotto le aspettative", fill: RESIDUAL_COLORS.negative, stroke: "none", radius: 5.5, exactCircle: true },
-        { type: "circle", text: "Sopra le aspettative", fill: RESIDUAL_COLORS.positive, stroke: "none", radius: 5.5, exactCircle: true },
+        { type: "circle", text: "Below expectations", fill: RESIDUAL_COLORS.negative, stroke: "none", radius: 5.5, exactCircle: true },
+        { type: "circle", text: "Above expectations", fill: RESIDUAL_COLORS.positive, stroke: "none", radius: 5.5, exactCircle: true },
     ]);
     renderCardLegend("#pca-legend", [
         { type: "eras" },
-        { type: "star", text: "MVP reale (colore = era)", shared: true },
-        { type: "circle", text: "Selezionato", stroke: COLORS.select, strokeWidth: 2.5, shared: true },
-        { type: "sizes", heading: "Area = share voto MVP (% punti ricevuti):",
+        { type: "star", text: "Actual MVP (color = era)", shared: true },
+        { type: "circle", text: "Selected", stroke: COLORS.select, strokeWidth: 2.5, shared: true },
+        { type: "sizes", heading: "Area = MVP vote share (% of points received):",
           scale: shareSizeScale, labels: shareClassLabels() },
     ]);
     renderCardLegend("#pcp-legend", [
         { type: "eras" },
-        { type: "line", color: COLORS.ink, width: 2.5, text: "MVP reale (spessa, colore = era)" },
-        { type: "line", color: COLORS.ink, width: 4, text: "Selezionato (le altre sbiadiscono)" },
+        { type: "line", color: COLORS.ink, width: 2.5, text: "Actual MVP (thick, color = era)" },
+        { type: "line", color: COLORS.ink, width: 4, text: "Selected (others fade)" },
     ]);
 }
 
@@ -470,7 +466,7 @@ function renderPCAScatterplot(data) {
         .domain(d3.extent(data, d => d.PC2)).nice()
         .range([height, 0]);
 
-    // Area proporzionale alla share, uguale per stella (MVP) e cerchio.
+    // Area proportional to share, same for star (MVP) and circle.
     const symbolGenerator = d3.symbol()
         .type(d => d.Is_MVP_Winner === 1 ? d3.symbolStar : d3.symbolCircle)
         .size(d => {
@@ -486,7 +482,7 @@ function renderPCAScatterplot(data) {
         .attr("y", 28)
         .attr("fill", COLORS.ink)
         .attr("text-anchor", "end")
-        .text(`PC1 (${(pcaMeta.explained_variance.PC1 * 100).toFixed(1)}%): ← guardie · lunghi →`);
+        .text(`PC1 (${(pcaMeta.explained_variance.PC1 * 100).toFixed(1)}%): ← guards · bigs →`);
 
     svg.append("g")
         .call(d3.axisLeft(yScale).ticks(6))
@@ -495,7 +491,7 @@ function renderPCAScatterplot(data) {
         .attr("y", -30)
         .attr("fill", COLORS.ink)
         .attr("text-anchor", "end")
-        .text(`PC2 (${(pcaMeta.explained_variance.PC2 * 100).toFixed(1)}%): volume offensivo e impatto →`);
+        .text(`PC2 (${(pcaMeta.explained_variance.PC2 * 100).toFixed(1)}%): offensive volume and impact →`);
 
     const ordered = [...data].sort((a, b) => a.Is_MVP_Winner - b.Is_MVP_Winner || b.MVP_Share - a.MVP_Share);
     const points = svg.selectAll(".point")
@@ -584,10 +580,10 @@ function renderPCAScatterplot(data) {
 function candidateTooltipHtml(d) {
     const fmt = v => (v === null || v === undefined) ? "N/D" : v;
     const narrativeColor = d.Narrative >= 0 ? RESIDUAL_COLORS_LIGHT.positive : RESIDUAL_COLORS_LIGHT.negative;
-    return `<strong>${d.Player}</strong> (${d.Season}, ${d.Team})${d.Is_MVP_Winner === 1 ? " ★ MVP" : ""}${d.Prev_MVP ? " · MVP uscente" : ""}<br>` +
+    return `<strong>${d.Player}</strong> (${d.Season}, ${d.Team})${d.Is_MVP_Winner === 1 ? " ★ MVP" : ""}${d.Prev_MVP ? " · defending MVP" : ""}<br>` +
         `${d.Tactical_Era} · PTS ${d.PTS} · PIE ${d.PIE} · WS ${fmt(d.WS)} · Team W% ${fmtPct(d.Team_W_PCT)}<br>` +
-        `Voto: reale <b>${fmtPctPrecise(d.MVP_Share)}</b> · atteso ${fmtPctPrecise(Math.max(0, d.Expected_Share))} · ` +
-        `narrativa <b style="color:${narrativeColor}">${fmtSigned(d.Narrative)}</b>`;
+        `Vote: actual <b>${fmtPctPrecise(d.MVP_Share)}</b> · expected ${fmtPctPrecise(Math.max(0, d.Expected_Share))} · ` +
+        `narrative <b style="color:${narrativeColor}">${fmtSigned(d.Narrative)}</b>`;
 }
 
 function findNearestPoint(data, xScale, yScale, mx, my, maxDist) {
@@ -621,9 +617,9 @@ function drawSeasonLink(season) {
         .attr("x1", cx).attr("y1", cy).attr("x2", wx).attr("y2", wy);
     layer.append("circle").attr("class", "season-link-end").attr("cx", cx).attr("cy", cy).attr("r", 9);
     layer.append("text").attr("class", "season-link-label").attr("x", cx + 11).attr("y", cy + 4)
-        .text(`scelta statistica: ${choice.Player.split(" ").pop()}`);
+        .text(`statistical pick: ${choice.Player.split(" ").pop()}`);
     layer.append("text").attr("class", "season-link-label").attr("x", wx + 11).attr("y", wy + 4)
-        .text(`MVP reale: ${winner.Player.split(" ").pop()}`);
+        .text(`actual MVP: ${winner.Player.split(" ").pop()}`);
 }
 
 const PCP_DIMENSIONS = ["PTS", "REB", "AST", "PIE", "Team_W_PCT", "Expected_Share", "MVP_Share"];
@@ -663,7 +659,7 @@ function renderParallelCoordinates(data) {
         .attr("x", voteX0).attr("y", -20)
         .attr("width", width - voteX0 + margin.right).attr("height", height + 34);
     svg.append("text").attr("class", "vote-band-label")
-        .attr("x", voteX0 + 4).attr("y", height + 14).text("VOTO");
+        .attr("x", voteX0 + 4).attr("y", height + 14).text("VOTE");
 
     const lineGenerator = d3.line()
         .defined(p => p[1] !== null && !Number.isNaN(p[1]))
@@ -721,7 +717,7 @@ function renderParallelCoordinates(data) {
         .attr("fill", COLORS.ink)
         .attr("text-decoration", "underline")
         .on("click", (_event, dim) => setMetric(dim))
-        .append("title").text(d => `${axisTitle(d)} · click per mostrarla in Line Chart e Box Plot`);
+        .append("title").text(d => `${axisTitle(d)} · click to show it in the Line Chart and Box Plot`);
 
     axesG.append("g")
         .attr("class", "brush")
@@ -809,40 +805,35 @@ function formatMetric(metric, v) {
 }
 
 const SEL_MEAN_MIN_N = 2;
-// Punto-media: area proporzionale al numero di candidati della stagione (minimo 4 px).
-const SEL_MEAN_MAX_N = 18;
-const selMeanScale = d3.scaleSqrt().domain([0, SEL_MEAN_MAX_N]).range([0, 9]);
-const selMeanRadius = n => Math.max(4, selMeanScale(n));
-const SEL_MEAN_LEGEND_N = [3, 6, 12, 18];
-// R² minimo perché una tendenza non sia segnalata come debole.
+const SEL_MEAN_R = 4.5;
+// Minimum R² for a trend not to be flagged as weak.
 const TREND_R2_MIN = 0.3;
 
 function renderLineChart(data) {
     const metric = currentMetric;
     const choiceMode = metric === "Expected_Share";
     const hasLeague = leagueAverages[seasonsSorted[0]][metric] !== undefined;
-    const refLabel = choiceMode ? "scelta statistica" : hasLeague ? "media di lega" : "media dei candidati";
+    const refLabel = choiceMode ? "statistical pick" : hasLeague ? "league average" : "candidate average";
     const filtered = data.length !== globalData.length;
-    // Coordinamento con la PCA: MVP fuori dalla selezione sbiaditi.
+    // Coordination with the PCA: MVPs outside the selection are faded.
     const selectedKeys = new Set(data.map(keyOf));
     const inSelection = rec => !filtered || selectedKeys.has(keyOf(rec));
     const mvpTotal = globalData.filter(d => d.Is_MVP_Winner === 1).length;
     const mvpIn = data.filter(d => d.Is_MVP_Winner === 1).length;
-    d3.select("#linechart-title").text(`${label(metric)}: MVP reale vs ${refLabel}` +
-        (filtered ? ` · MVP nella selezione: ${mvpIn}/${mvpTotal}` : ""));
+    d3.select("#linechart-title").text(`${label(metric)}: actual MVP vs ${refLabel}` +
+        (filtered ? ` · MVPs in selection: ${mvpIn}/${mvpTotal}` : ""));
     const candidate = selectedCandidateKey && globalData.find(d => keyOf(d) === selectedCandidateKey);
     const legendItems = [
         { type: "eras" },
-        { type: "line", cls: "series-winner", star: true, text: "MVP reale" },
+        { type: "line", cls: "series-winner", text: "Actual MVP" },
         { type: "line", cls: "series-reference", text: refLabel.charAt(0).toUpperCase() + refLabel.slice(1) },
-        { type: "line", color: COLORS.mvp, width: 4, opacity: 0.5, text: "Tendenza (stesso tratto della serie)" },
+        { type: "line", color: COLORS.mvp, width: 4, opacity: 0.5, text: "Trend (same stroke as its series)" },
     ];
     if (filtered) legendItems.push(
-        { type: "star", fill: COLORS.ink, stroke: "none", opacity: 0.3, text: "MVP fuori dalla selezione (sbiadita)" },
-        { type: "sizes", heading: "Media selezione per stagione · area = n candidati:",
-          fill: COLORS.selection, radii: SEL_MEAN_LEGEND_N.map(selMeanRadius),
-          labels: SEL_MEAN_LEGEND_N.map(n => (n === 3 ? "n=2–3" : `n=${n}`)) });
-    if (candidate) legendItems.push({ type: "circle", stroke: COLORS.select, strokeWidth: 2, fill: "none", text: `${candidate.Player} (selezionato)` });
+        { type: "star", fill: COLORS.ink, stroke: "none", opacity: 0.3, text: "MVP outside the selection (faded)" },
+        { type: "circle", fill: COLORS.selection, stroke: COLORS.white, radius: SEL_MEAN_R,
+          exactCircle: true, text: "Selection mean per season" });
+    if (candidate) legendItems.push({ type: "circle", stroke: COLORS.select, strokeWidth: 2, fill: "none", text: `${candidate.Player} (selected)` });
     renderCardLegend("#line-legend", legendItems);
 
     const container = d3.select("#line-chart");
@@ -866,8 +857,8 @@ function renderLineChart(data) {
                 : d3.mean(globalData.filter(d => d.Season === season), d => d[metric]),
     }));
     const valid = v => v !== null && v !== undefined && !Number.isNaN(v);
-    // Media per stagione come punti, non linea: con pochi candidati per stagione una linea
-    // suggerirebbe una tendenza continua. Stagioni con meno di SEL_MEAN_MIN_N omesse.
+    // Per-season mean as points, not a line: with few candidates per season a line
+    // would suggest a continuous trend. Seasons with fewer than SEL_MEAN_MIN_N are omitted.
     const selectionMeans = filtered ? seasonsSorted.map(season => {
         const vals = data.filter(d => d.Season === season).map(d => d[metric]).filter(valid);
         return { season, n: vals.length, value: d3.mean(vals) };
@@ -875,7 +866,7 @@ function renderLineChart(data) {
     const allValues = [...winners, ...reference, ...selectionMeans].map(p => p.value).filter(valid);
     if (candidate && valid(candidate[metric])) allValues.push(candidate[metric]);
     if (allValues.length < 2) {
-        container.append("p").attr("class", "card-desc").text("Dati insufficienti per questa statistica.");
+        container.append("p").attr("class", "card-desc").text("Not enough data for this statistic.");
         return;
     }
 
@@ -895,7 +886,7 @@ function renderLineChart(data) {
         .attr("x", width)
         .attr("y", height + 30)
         .attr("text-anchor", "end")
-        .text("Stagione");
+        .text("Season");
     if (metric === "Narrative") {
         svg.append("line").attr("class", "zero-line")
             .attr("x1", 0).attr("x2", width).attr("y1", yScale(0)).attr("y2", yScale(0));
@@ -906,7 +897,7 @@ function renderLineChart(data) {
         .x(p => xScale(p.season))
         .y(p => yScale(p.value))(series);
 
-    // Sotto il brush: elementi non interattivi.
+    // Below the brush: non-interactive elements.
     svg.append("path").attr("class", "series-reference").attr("d", lineOf(reference));
     svg.append("path").attr("class", "series-winner").attr("d", lineOf(winners));
     const hasCandidate = candidate && valid(candidate[metric]);
@@ -935,7 +926,7 @@ function renderLineChart(data) {
             const [x0, x1] = event.selection;
             const inRange = s => seasonsSorted.map((season, idx) => ({ season, idx, value: s[idx].value }))
                 .filter(p => xScale(p.season) >= x0 && xScale(p.season) <= x1 && valid(p.value));
-            const refName = choiceMode ? "Scelta stat." : hasLeague ? "Lega" : "Candidati";
+            const refName = choiceMode ? "Stat. pick" : hasLeague ? "League" : "Candidates";
             const fits = [
                 { name: "MVP", pts: inRange(winners), cls: "trend-winner" },
                 { name: refName, pts: inRange(reference), cls: "trend-reference" },
@@ -944,7 +935,7 @@ function renderLineChart(data) {
                 .map(f => ({ ...f, weak: f.reg.r2 < TREND_R2_MIN }));
             if (fits.length === 0) return;
 
-            // Regressione lineare sul periodo selezionato: stesso tratto della serie, più chiara se R² basso.
+            // Linear regression on the selected period: same stroke as its series, lighter if R² is low.
             const perSeason = v => (PCT_METRICS.includes(metric)
                 ? `${d3.format("+.2r")(v * 100)} pt%`
                 : d3.format("+.2r")(v));
@@ -958,14 +949,14 @@ function renderLineChart(data) {
             const period = `${pts0[0].season} → ${pts0[pts0.length - 1].season}`;
             const sample = cls => `<svg width="22" height="8"><line class="trend-line ${cls}" x1="1" x2="21" y1="4" y2="4"/></svg>`;
             trendReadout.html(fits.map(f =>
-                `<div>${sample(f.cls)} <b>${f.name}</b> ${perSeason(f.reg.slope)} a stagione ` +
-                `<span class="muted">(${period} · R² ${f.reg.r2.toFixed(2)}${f.weak ? ", tendenza debole" : ""})</span></div>`).join(""));
+                `<div>${sample(f.cls)} <b>${f.name}</b> ${perSeason(f.reg.slope)} per season ` +
+                `<span class="muted">(${period} · R² ${f.reg.r2.toFixed(2)}${f.weak ? ", weak trend" : ""})</span></div>`).join(""));
         });
     const lineBrushG = svg.append("g").attr("class", "brush").call(brush);
     lineBrushG.node().__brushBehavior = brush;
     clearBrushOnClick(lineBrushG, brush);
 
-    // Sopra il brush: elementi cliccabili.
+    // Above the brush: clickable elements.
     const marks = svg.append("g").attr("class", "line-marks");
     const bindCandidate = (sel, rec) => sel
         .on("click", (event, d) => { event.stopPropagation(); toggleCandidate(rec(d)); })
@@ -977,10 +968,10 @@ function renderLineChart(data) {
         .enter().append("circle")
         .attr("class", "selection-mean")
         .attr("cx", p => xScale(p.season)).attr("cy", p => yScale(p.value))
-        .attr("r", p => selMeanRadius(p.n))
+        .attr("r", SEL_MEAN_R)
         .on("click", event => event.stopPropagation())
         .on("mouseenter mousemove", (event, p) => showTooltip(
-            `<strong>Media selezione · ${p.season}</strong><br>${label(metric)} ${formatMetric(metric, p.value)} · n=${p.n} candidati`, event))
+            `<strong>Selection mean · ${p.season}</strong><br>${label(metric)} ${formatMetric(metric, p.value)} · n=${p.n} candidates`, event))
         .on("mouseleave", hideTooltip);
 
     const star = d3.symbol().type(d3.symbolStar).size(85);
@@ -1006,7 +997,7 @@ function renderLineChart(data) {
     }
 }
 
-// Statistiche di Tukey: baffi fino all'ultimo dato entro 1,5×IQR, oltre = outlier.
+// Tukey statistics: whiskers reach the last value within 1.5×IQR, beyond = outlier.
 function boxStats(sorted) {
     const q1 = d3.quantile(sorted, 0.25);
     const median = d3.quantile(sorted, 0.5);
@@ -1026,7 +1017,7 @@ function drawWhiskers(g, cx, capW, yScale, { lo, q1, q3, hi }) {
 }
 
 const OUTLIER_R = 2.5;
-// Outlier in colonna sull'asse del box, spostati di lato solo se si sovrappongono.
+// Outliers in a column on the box axis, shifted sideways only when they overlap.
 function dodgeOutliers(ys, maxSpread) {
     const minDist = 2 * OUTLIER_R + 0.5;
     const step = minDist;
@@ -1065,17 +1056,17 @@ function renderBoxPlot(data) {
 
     const metric = currentMetric === "Expected_Share" ? "PIE" : currentMetric;
     const shareMetric = fourthBoxMetric(metric);
-    d3.select("#boxplot-title").text(`${label(metric)} per era · ${label(shareMetric)}`);
-    d3.select("#boxplot-desc").text(`Click su un box per filtrare l'era · a destra la ${label(shareMetric).toLowerCase()} della selezione`);
+    d3.select("#boxplot-title").text(`${label(metric)} by era · ${label(shareMetric)}`);
+    d3.select("#boxplot-desc").text(`Click a box to filter the era · right: ${label(shareMetric).toLowerCase()} of the selection`);
 
     renderCardLegend("#boxplot-legend", [
         { type: "eras" },
         { type: "rect", fill: COLORS.selection, opacity: 0.7, stroke: COLORS.ink,
-          text: `${label(shareMetric)} (selezione${filters.era ? `, ${filters.era}` : ""})` },
+          text: `${label(shareMetric)} (selection${filters.era ? `, ${filters.era}` : ""})` },
         ...(data.length < globalData.length
-            ? [{ type: "rect", fill: "none", stroke: COLORS.all, strokeWidth: 1.5, text: "Intero dataset (riferimento)" }]
+            ? [{ type: "rect", fill: "none", stroke: COLORS.all, strokeWidth: 1.5, text: "Full dataset (reference)" }]
             : []),
-        { type: "circle", text: "Outlier (oltre 1,5×IQR)", radius: 3 },
+        { type: "circle", text: "Outlier (beyond 1.5×IQR)", radius: 3 },
     ]);
 
     const container = d3.select("#boxplot-chart");
@@ -1085,7 +1076,7 @@ function renderBoxPlot(data) {
     const values = data.map(d => d[metric]).filter(valid);
     if (values.length === 0) {
         container.append("p").attr("class", "card-desc")
-            .text(`Nessun valore di ${label(metric)} nella selezione corrente.`);
+            .text(`No ${label(metric)} values in the current selection.`);
         return;
     }
 
@@ -1093,7 +1084,7 @@ function renderBoxPlot(data) {
     const { width, height } = chartSize(container, margin);
     const svg = appendSvg(container, width, height, margin);
 
-    // 4° box: asse y proprio, perché ha un'unità diversa dalla metrica delle ere.
+    // 4th box: own y axis, since its unit differs from the era metric.
     const SHARE_AXIS_W = 44, SHARE_GAP = 14;
     const sharePanelW = Math.max(50, width * 0.2);
     const mainW = Math.max(60, width - SHARE_GAP - SHARE_AXIS_W - sharePanelW);
@@ -1122,8 +1113,8 @@ function renderBoxPlot(data) {
             .attr("class", `era-box ${filters.era === era ? "active" : ""}`)
             .on("click", () => toggleEra(era))
             .on("mouseenter mousemove", (event) => showTooltip(
-                `<strong>${era}</strong> (n=${eraData.length})<br>Mediana ${formatMetric(metric, median)} · ` +
-                `IQR ${formatMetric(metric, q1)}–${formatMetric(metric, q3)}<br>Click per filtrare l'era`, event))
+                `<strong>${era}</strong> (n=${eraData.length})<br>Median ${formatMetric(metric, median)} · ` +
+                `IQR ${formatMetric(metric, q1)}–${formatMetric(metric, q3)}<br>Click to filter the era`, event))
             .on("mouseleave", hideTooltip);
 
         drawWhiskers(g, x + boxWidth / 2, boxWidth / 2, yScale, { lo: min, q1, q3, hi: max });
@@ -1138,7 +1129,7 @@ function renderBoxPlot(data) {
     });
 }
 
-// 4° box: Narrativa della selezione (share reale se le ere mostrano già la Narrativa).
+// 4th box: Narrative of the selection (actual share if the eras already show Narrative).
 function fourthBoxMetric(metric) {
     return metric === "Narrative" ? "MVP_Share" : "Narrative";
 }
@@ -1148,7 +1139,7 @@ function renderShareBox(svg, data, { metric, x0, panelW, axisW, height, boxWidth
     const fmt = v => formatMetric(shareMetric, v);
     const valid = v => v !== null && v !== undefined && !Number.isNaN(v);
 
-    // Dominio fisso sull'intero dataset: selezioni diverse restano confrontabili.
+    // Domain fixed on the full dataset: different selections stay comparable.
     const yShare = d3.scaleLinear()
         .domain([Math.min(0, d3.min(globalData, d => d[shareMetric])), d3.max(globalData, d => d[shareMetric])])
         .nice().range([height, 0]);
@@ -1161,14 +1152,14 @@ function renderShareBox(svg, data, { metric, x0, panelW, axisW, height, boxWidth
         : v => formatMetric(shareMetric, v);
     panel.append("g").call(d3.axisLeft(yShare).ticks(4).tickFormat(tickFmt));
     addYAxisTitle(panel, height, axisW,
-        shareMetric === "Narrative" ? "Narrativa (reale − attesa)" : axisTitle(shareMetric));
+        shareMetric === "Narrative" ? "Narrative (actual − expected)" : axisTitle(shareMetric));
     if (yShare.domain()[0] < 0) {
         panel.append("line").attr("class", "zero-line")
             .attr("x1", 0).attr("x2", panelW).attr("y1", yShare(0)).attr("y2", yShare(0));
     }
 
     const cx = panelW / 2;
-    const scopeLabel = filters.era || "Tutte le ere";
+    const scopeLabel = filters.era || "All eras";
     panel.append("text").attr("class", "share-box-label")
         .attr("x", cx).attr("y", height + 16).attr("text-anchor", "middle").text(scopeLabel);
 
@@ -1176,7 +1167,7 @@ function renderShareBox(svg, data, { metric, x0, panelW, axisW, height, boxWidth
     const values = rows.map(d => d[shareMetric]).sort(d3.ascending);
     if (values.length === 0) return;
 
-    // Box di riferimento dell'intero dataset, disegnato sotto quello della selezione.
+    // Full-dataset reference box, drawn below the selection box.
     const isFiltered = data.length < globalData.length;
     const refValues = globalData.map(d => d[shareMetric]).filter(valid).sort(d3.ascending);
     const ref = boxStats(refValues);
@@ -1197,12 +1188,12 @@ function renderShareBox(svg, data, { metric, x0, panelW, axisW, height, boxWidth
     const { q1, median, q3, lo, hi } = boxStats(values);
     const x = cx - boxWidth / 2;
     const refLine = isFiltered
-        ? `<br><span style="opacity:0.75">Intero dataset: mediana ${fmt(ref.median)} · IQR ${fmt(ref.q1)} / ${fmt(ref.q3)}</span>`
+        ? `<br><span style="opacity:0.75">Full dataset: median ${fmt(ref.median)} · IQR ${fmt(ref.q1)} / ${fmt(ref.q3)}</span>`
         : "";
     const g = panel.append("g").attr("class", "share-box")
         .on("mouseenter mousemove", (event) => showTooltip(
-            `<strong>${label(shareMetric)}</strong> · ${isFiltered ? "selezione" : "intero dataset"}, ${scopeLabel} (n=${values.length})<br>` +
-            `Mediana ${fmt(median)} · IQR ${fmt(q1)} / ${fmt(q3)}${refLine}`, event))
+            `<strong>${label(shareMetric)}</strong> · ${isFiltered ? "selection" : "full dataset"}, ${scopeLabel} (n=${values.length})<br>` +
+            `Median ${fmt(median)} · IQR ${fmt(q1)} / ${fmt(q3)}${refLine}`, event))
         .on("mouseleave", hideTooltip);
 
     drawWhiskers(g, cx, boxWidth / 2, yShare, { lo, q1, q3, hi });
@@ -1215,7 +1206,7 @@ function renderShareBox(svg, data, { metric, x0, panelW, axisW, height, boxWidth
 
 const COEF_SCALE_MAX = 0.3;
 
-// Valori fuori scala segnalati con "<0" o "›" invece di essere tagliati.
+// Out-of-scale values flagged with "<0" or "›" instead of being clipped.
 function boundedBar(g, x0, y, h, value, scale) {
     const [d0, d1] = scale.domain();
     const bar = g.append("rect").attr("x", x0).attr("y", y).attr("height", h).attr("rx", 1.5)
@@ -1245,7 +1236,7 @@ function compareBars(panel, rows, faded) {
         anyOut = anyOut || out;
         g.append("line").attr("class", "model-ref")
             .attr("x1", labelW + x(r.all)).attr("x2", labelW + x(r.all)).attr("y1", 0).attr("y2", 15);
-        g.append("title").text(`${r.name}: selezione ${r.fmt(r.sel)} · tutti ${r.fmt(r.all)}`);
+        g.append("title").text(`${r.name}: selection ${r.fmt(r.sel)} · all ${r.fmt(r.all)}`);
     });
     return anyOut;
 }
@@ -1254,26 +1245,26 @@ function renderModelPanel(selected, isFiltered) {
     const panel = d3.select("#model-panel");
     panel.selectAll("*").remove();
     d3.select("#model-title").text(isFiltered
-        ? `Come vota la selezione (n=${selected.length})`
-        : `Come votano i giornalisti (n=${selected.length})`);
+        ? `How the selection is voted (n=${selected.length})`
+        : `How the media votes (n=${selected.length})`);
 
     const model = fitVoteModel(selected);
     const all = globalVoteModel;
     if (!model) {
-        panel.append("p").attr("class", "panel-note warn").text("n < 6: modello non stimabile");
+        panel.append("p").attr("class", "panel-note warn").text("n < 6: model cannot be estimated");
         return;
     }
     const collapse = rows => rows.filter(d => d.MVP_Share < 0.10).length / rows.length;
     const coefFmt = v => v.toFixed(3);
     const anyOut = compareBars(panel, [
-        { name: "Peso merito (PIE)", sel: model.bPIE, all: all.bPIE, max: COEF_SCALE_MAX, fmt: coefFmt },
-        { name: "Peso squadra (W%)", sel: model.bW, all: all.bW, max: COEF_SCALE_MAX, fmt: coefFmt },
-        { name: "R² statistiche", sel: model.r2, all: all.r2, max: 1, fmt: fmtPct },
-        { name: "Voto ≈ 0 (<10%)", sel: collapse(selected), all: collapse(globalData), max: 1, fmt: fmtPct },
+        { name: "Merit weight (PIE)", sel: model.bPIE, all: all.bPIE, max: COEF_SCALE_MAX, fmt: coefFmt },
+        { name: "Team weight (W%)", sel: model.bW, all: all.bW, max: COEF_SCALE_MAX, fmt: coefFmt },
+        { name: "Fit to stats (R²)", sel: model.r2, all: all.r2, max: 1, fmt: fmtPct },
+        { name: "Vote share < 10%", sel: collapse(selected), all: collapse(globalData), max: 1, fmt: fmtPct },
     ], model.n < 25);
     panel.append("p").attr("class", "legend-note")
-        .html(`${swatch(COLORS.selection, "■")} barra = selezione · ${swatch(COLORS.all, "<b>|</b>")} = tutti i candidati${model.n < 25 ? " · barre chiare = campione piccolo" : ""}` +
-            `${anyOut ? " · <b>&lt;0</b> = peso negativo · <b>›</b> = oltre la scala" : ""}`);
+        .html(`${swatch(COLORS.selection, "■")} bar = selection · ${swatch(COLORS.all, "<b>|</b>")} = all candidates${model.n < 25 ? " · light bars = small sample" : ""}` +
+            `${anyOut ? " · <b>&lt;0</b> = negative weight · <b>›</b> = beyond scale" : ""}`);
 }
 
 function narrativeExtremes(selected) {
@@ -1289,7 +1280,7 @@ function renderNarrativePanel(selected) {
     const panel = d3.select("#narrative-panel");
     panel.selectAll("*").remove();
     if (selected.length === 0) {
-        panel.append("p").attr("class", "panel-note warn").text("nessun candidato nella selezione");
+        panel.append("p").attr("class", "panel-note warn").text("no candidates in the selection");
         return;
     }
     const { pos, neg } = narrativeExtremes(selected);
@@ -1305,12 +1296,12 @@ function renderNarrativePanel(selected) {
             .on("click", () => toggleCandidate(d));
         g.append("rect").attr("class", "row-hit").attr("width", w).attr("height", rowH);
         g.append("text").attr("class", "model-label").attr("x", 0).attr("y", 10)
-            .text(`${d.Player.split(" ").pop()} ${d.Season.slice(2)}${d.Is_MVP_Winner === 1 ? " ★" : ""}${d.Prev_MVP ? " ↺" : ""}`);
+            .text(`${d.Player.split(" ").pop()} ${d.Season.slice(2)}${d.Is_MVP_Winner === 1 ? " ★" : ""}`);
         g.append("rect")
             .attr("x", labelW + Math.min(x(0), x(d.Narrative))).attr("y", 2)
             .attr("width", Math.abs(x(d.Narrative) - x(0))).attr("height", 9).attr("rx", 1.5)
             .attr("fill", residualColor(d));
-        g.append("title").text(`${d.Player} ${d.Season}: share reale ${fmtPct(d.MVP_Share)}, attesa ${fmtPct(Math.max(0, d.Expected_Share))} (${fmtSigned(d.Narrative)})`);
+        g.append("title").text(`${d.Player} ${d.Season}: actual share ${fmtPct(d.MVP_Share)}, expected ${fmtPct(Math.max(0, d.Expected_Share))} (${fmtSigned(d.Narrative)})`);
     });
 }
 
@@ -1323,8 +1314,7 @@ function resetCandidateFocus() {
     if (pcaG) {
         pcaG.select(".season-link-layer").selectAll("*").remove();
     }
-    d3.select("#selected-player-info").html(
-        "<p class=\"muted\"><em>Click su un candidato per il dettaglio: voto atteso vs reale e confronto con la sua stagione.</em></p>");
+    d3.select("#selected-player-info").property("hidden", true).html("");
 }
 
 function clearCandidateSelection() {
@@ -1333,88 +1323,92 @@ function clearCandidateSelection() {
 }
 
 function renderCandidatePanel(d) {
-    const box = d3.select("#selected-player-info");
+    const box = d3.select("#selected-player-info").property("hidden", false);
     box.selectAll("*").remove();
     box.append("button")
         .attr("class", "close-candidate")
         .attr("type", "button")
-        .attr("title", "Deseleziona (Esc)")
-        .attr("aria-label", "Deseleziona il candidato")
+        .attr("title", "Deselect (Esc)")
+        .attr("aria-label", "Deselect the candidate")
         .text("✕")
         .on("click", clearCandidateSelection);
     box.append("div").html(
-        `<strong>${d.Player} (${d.Season})</strong>${d.Is_MVP_Winner === 1 ? " ★" : ""}${d.Prev_MVP ? ` <span class="badge">↺ MVP uscente</span>` : ""}` +
-        ` <span class="muted">${d.Team} · ${d.Tactical_Era}</span>`);
+        `<strong>${d.Player} (${d.Season})</strong>${d.Is_MVP_Winner === 1 ? " ★" : ""}${d.Prev_MVP ? ` <span class="badge">Defending MVP</span>` : ""}` +
+        ` <span class="muted">· ${d.Tactical_Era}</span>`);
 
+    const exp = Math.max(0, d.Expected_Share);
+
+    // "vote" row: player's expected → actual. "season, expected" row: expected vote of
+    // the same season's candidates, to place the player among rivals.
     const w = box.node().getBoundingClientRect().width - 18 || 250;
-    const labelW = 52, plotW = w - labelW - 8;
+    const labelW = 84, plotW = w - labelW - 8;
     const x = d3.scaleLinear().domain([0, 1]).range([0, plotW]).clamp(true);
     const svg = box.append("svg").attr("width", w).attr("height", 64);
     const g = svg.append("g").attr("transform", `translate(${labelW},0)`);
 
     const yv = 12;
-    const exp = Math.max(0, d.Expected_Share);
-    svg.append("text").attr("class", "model-label").attr("x", 0).attr("y", yv + 4).text("voto");
+    svg.append("text").attr("class", "model-label").attr("x", 0).attr("y", yv + 4).text("vote");
     g.append("line").attr("class", "bar-track-line").attr("x1", 0).attr("x2", plotW).attr("y1", yv).attr("y2", yv);
     g.append("line").attr("x1", x(exp)).attr("x2", x(d.MVP_Share)).attr("y1", yv).attr("y2", yv)
         .attr("stroke", residualColor(d)).attr("stroke-width", 4);
     g.append("circle").attr("cx", x(exp)).attr("cy", yv).attr("r", 4.5).attr("class", "dot-expected");
-    g.append("circle").attr("cx", x(d.MVP_Share)).attr("cy", yv).attr("r", 4.5)
-        .attr("fill", residualColor(d));
-    svg.append("title").text(`Share attesa ${fmtPct(exp)} → reale ${fmtPct(d.MVP_Share)} (narrativa ${fmtSigned(d.Narrative)})`);
+    g.append("circle").attr("cx", x(d.MVP_Share)).attr("cy", yv).attr("r", 4.5).attr("fill", residualColor(d));
 
     const ys = 34;
     const info = seasonInfo[d.Season];
     const season = globalData.filter(p => p.Season === d.Season);
-    svg.append("text").attr("class", "model-label").attr("x", 0).attr("y", ys + 4).text("stagione");
+    const winner = season.find(p => p.Is_MVP_Winner === 1);
+    svg.append("text").attr("class", "model-label").attr("x", 0).attr("y", ys + 4).text("season, expected");
     g.append("line").attr("class", "bar-track-line").attr("x1", 0).attr("x2", plotW).attr("y1", ys).attr("y2", ys);
     season.forEach(p => {
-        if (p.Is_MVP_Winner === 1) return;
+        if (p.Is_MVP_Winner === 1 || p === d) return;
         g.append("circle").attr("cx", x(Math.max(0, p.Expected_Share))).attr("cy", ys).attr("r", 3.2)
-            .attr("class", "dot-season").append("title").text(`${p.Player}: attesa ${fmtPct(Math.max(0, p.Expected_Share))}`);
+            .attr("class", "dot-season").append("title").text(`${p.Player}: expected ${fmtPct(Math.max(0, p.Expected_Share))}`);
     });
-    const choice = season.find(p => p.Player === info.statistical_choice);
-    const winner = season.find(p => p.Is_MVP_Winner === 1);
-    if (choice) g.append("circle").attr("cx", x(Math.max(0, choice.Expected_Share))).attr("cy", ys).attr("r", 7).attr("class", "dot-choice");
-    if (!info.matches && choice && winner) {
-        g.append("line").attr("class", "gap-line")
-            .attr("x1", x(Math.max(0, winner.Expected_Share))).attr("x2", x(Math.max(0, choice.Expected_Share)))
-            .attr("y1", ys + 10).attr("y2", ys + 10);
-    }
     if (winner) {
         g.append("path").attr("class", "winner-star")
             .attr("transform", `translate(${x(Math.max(0, winner.Expected_Share))},${ys})`)
             .attr("d", d3.symbol().type(d3.symbolStar).size(110)())
             .attr("fill", ERA_COLORS[winner.Tactical_Era]).attr("stroke", COLORS.white).attr("stroke-width", 0.7)
             .on("click", () => { if (keyOf(winner) !== selectedCandidateKey) selectCandidate(winner); })
-            .append("title").text(`${winner.Player}: MVP ${winner.Season} · click per il dettaglio`);
+            .append("title").text(`${winner.Player}: MVP ${winner.Season} · click for details`);
     }
+    // Selected player: same ring as "Selected candidate" in the main legend, drawn on top, with a direct label.
     if (d.Is_MVP_Winner !== 1) {
-        g.append("circle").attr("cx", x(Math.max(0, d.Expected_Share))).attr("cy", ys).attr("r", 3.8).attr("fill", SELECT_COLOR);
+        const px = x(exp);
+        g.append("circle").attr("cx", px).attr("cy", ys).attr("r", 5.5)
+            .attr("fill", COLORS.white).attr("stroke", SELECT_COLOR).attr("stroke-width", 2.5);
+        g.append("text").attr("class", "player-tag").attr("x", px).attr("y", ys - 9)
+            .attr("text-anchor", px < 20 ? "start" : px > plotW - 20 ? "end" : "middle")
+            .text(d.Player.split(" ").pop());
     }
     [0, 0.5, 1].forEach(t => g.append("text").attr("class", "tick-mini").attr("x", x(t)).attr("y", 60)
         .attr("text-anchor", t === 0 ? "start" : t === 1 ? "end" : "middle").text(fmtPct(t)));
 
     box.append("p").attr("class", "legend-note").html(
-        `○ attesa → ${swatch(residualColor(d), "●")} reale · ★ MVP (colore = era) · ${swatch(COLORS.choice, "◯")} scelta statistica · ` +
-        `${swatch(COLORS.choice, "┄")} scarto scelta → MVP · ${swatch(COLORS.context, "●")} altri candidati della stagione` +
-        `${d.Is_MVP_Winner !== 1 ? ` · ${swatch(COLORS.select, "●")} ${d.Player.split(" ").pop()}` : ""}`);
+        `○ expected · ${swatch(residualColor(d), "●")} actual · ★ MVP` +
+        `${d.Is_MVP_Winner !== 1 ? " · <b>◯</b> selected player" : ""}` +
+        ` · ${swatch(COLORS.context, "●")} other candidates`);
+
+    const gap = Math.round(d.Narrative * 100);
+    box.append("p").attr("class", "panel-note").html(
+        `<b style="color:${residualColor(d)}">${gap >= 0 ? "+" : "−"}${Math.abs(gap)} points ${gap >= 0 ? "above" : "below"} expected</b>` +
+        ` (${fmtPct(exp)} → ${fmtPct(d.MVP_Share)})`);
 
     let verdict;
     if (info.matches) {
-        verdict = d.Player === info.winner ? "Era la scelta statistica e ha vinto." : `Ha vinto la scelta statistica, ${info.winner}.`;
+        verdict = d.Player === info.winner ? "Was the statistical pick and won." : `The statistical pick, ${info.winner}, won.`;
     } else if (d.Player === info.winner) {
         verdict = info.merit_gap >= 0.15
-            ? `<b>MVP controcorrente</b>: la scelta statistica era ${info.statistical_choice}.`
-            : `Ha vinto su ${info.statistical_choice}, quasi a pari merito statistico.`;
+            ? `<b>MVP over the statistical pick</b> (${info.statistical_choice}).`
+            : `Won over ${info.statistical_choice}, nearly tied on the numbers.`;
     } else if (d.Player === info.statistical_choice) {
-        verdict = `<b>Snobbato</b>: era la scelta statistica, ha vinto ${info.winner}.`;
+        verdict = `<b>Statistical pick, not elected</b>: ${info.winner} won.`;
     } else {
-        verdict = `MVP ${info.winner}, scelta statistica ${info.statistical_choice}.`;
+        verdict = `MVP ${info.winner}, statistical pick ${info.statistical_choice}.`;
     }
-    const score = currentSelectionData.includes(d) && d.dynamic_score !== undefined ? ` · MVP Score ${d.dynamic_score.toFixed(2)}` : "";
     box.append("p").attr("class", "panel-note").html(
-        `PIE ${d.PIE} · W% ${fmtPct(d.Team_W_PCT)} · voto ${fmtPct(d.MVP_Share)} (atteso ${fmtPct(Math.max(0, d.Expected_Share))})${score}<br>${verdict}`);
+        `${verdict}<br><span class="muted">PIE ${d3.format(".3f")(d.PIE)} (average ${d3.format(".3f")(d3.mean(globalData, p => p.PIE))}) · team ${fmtPct(d.Team_W_PCT)} wins</span>`);
 }
 
 function toggleCandidate(d) {
@@ -1450,13 +1444,13 @@ function renderPlayerVsWinnersBoxPlot(player) {
 
     d3.select("#boxplot-title").text(`${player.Player} (${player.Season}) vs MVP — ${era}`);
     d3.select("#boxplot-desc").html(hasPlayerVal
-        ? `${label(metric)} di ${winnerVals.length} vincitori MVP dell'era`
-        : `${label(metric)} non disponibile per <strong>${player.Player}</strong>`);
+        ? `${label(metric)} of ${winnerVals.length} MVP winners of the era`
+        : `${label(metric)} not available for <strong>${player.Player}</strong>`);
 
     renderCardLegend("#boxplot-legend", [
-        { type: "rect", fill: ERA_COLORS[era], opacity: 0.6, stroke: COLORS.ink, text: `Vincitori MVP ${era} (box)` },
-        { type: "line", color: SELECT_COLOR, width: 1.5, dash: "4,3", text: `${player.Player} (selezionato)` },
-        { type: "circle", text: "Outlier (oltre 1,5×IQR)", radius: 3 },
+        { type: "rect", fill: ERA_COLORS[era], opacity: 0.6, stroke: COLORS.ink, text: `${era} MVP winners (box)` },
+        { type: "line", color: SELECT_COLOR, width: 1.5, dash: "4,3", text: `${player.Player} (selected)` },
+        { type: "circle", text: "Outlier (beyond 1.5×IQR)", radius: 3 },
     ]);
 
     const container = d3.select("#boxplot-chart");
