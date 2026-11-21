@@ -392,7 +392,7 @@ esadecimale scritto a mano resta in CSS o JS (eccetto le ombre). Ogni colore ha 
 |---|---|
 | Tableau10[0,4,8] blu/verde/marrone | era tattica (categorica) |
 | PuOr[9] viola / arancione | narrativa: voto reale sopra / sotto l'atteso (divergente, zero al centro) |
-| Tableau10[3] teal | selezione corrente (brush, 4° box, barre del modello) |
+| Tableau10[3] teal | selezione corrente (brush, media della selezione per stagione nel line chart, 4° box, barre del modello) |
 | Greys[8] nero | candidato selezionato con il click |
 | Greys[6] | serie "MVP reale" nel line chart |
 | Greys[5] | altri candidati della stessa stagione (pannello candidato) |
@@ -426,3 +426,31 @@ chart diventa la vista temporale della PCA: mostra *quando* vince un certo profi
 Esempio (brush su PC1 < 0, profilo da guardia): MVP guardie 3/9 in Pre-Analytics,
 10/11 in Transition, 4/7 in Small-Ball. Le ★ sono cliccabili (dettaglio del candidato,
 coordinato con PCA, PCP, box plot e sidebar); anche la ★ del pannello candidato lo è.
+In aggiunta, la media della selezione per stagione è tornata come **punti teal senza
+linea**: l'area del punto è proporzionale al numero di candidati selezionati in quella
+stagione e le stagioni con meno di 2 candidati sono omesse. Una linea suggerirebbe una
+tendenza continua che, con campioni di 2-3 candidati, i dati non sostengono; i punti
+dimensionati per n rendono visibile quanto è affidabile ogni media (tooltip con valore e n).
+
+### Line chart: rette di tendenza (analytics attivata dal brush sulla timeline)
+- Ogni retta di regressione ha lo stile della serie a cui si riferisce (MVP continua,
+  scelta statistica / media di lega tratteggiata), più spessa e semitrasparente: prima
+  erano entrambe tratteggiate e non si capiva quale retta descrivesse quale serie.
+- I valori (periodo, pendenza per stagione, R²) stanno in una riga di testo sotto il
+  grafico, ad altezza fissa, ognuno preceduto da un glifo nello stile della sua retta
+  (━ MVP, ┅ scelta statistica). Etichette dentro il grafico sono state scartate: finivano
+  sopra le stelle e oltre il bordo.
+- Se R² < 0.3 la retta è disegnata più chiara e il valore è marcato "debole", per non far
+  leggere come tendenza una retta che non spiega i dati.
+- Una sola voce di legenda ("Tendenza, stesso tratto della serie") e descrizione della card
+  ridotta a "Trascina sulla timeline per la tendenza · click su ★ per il dettaglio".
+- Il rettangolo del brush della timeline è grigio neutro: sceglie un intervallo di stagioni
+  e non filtra i candidati, quindi non usa il teal della selezione dei candidati.
+
+### Rimozione dell'ingrandimento delle card
+Su indicazione del docente è stato rimosso il pulsante ⤢ (`setupExpandableCards`,
+`toggleExpand`, `rerenderCard` e relativi stili): tutto deve essere leggibile nella pagina
+principale. `Esc` continua ad azzerare brush, filtro per era e candidato selezionato. Le voci
+di legenda comuni (ere, ★ MVP, candidato selezionato) restano nella legenda della sidebar.
+I risultati della tendenza del line chart sono ora su due righe sotto il grafico (una per
+retta, con un campione SVG dello stesso tratto), per restare leggibili senza ingrandire.

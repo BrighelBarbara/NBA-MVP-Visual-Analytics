@@ -1,20 +1,16 @@
-/* Palette: ogni variabile ha UN solo significato. I valori sono quelli di d3
-   (d3.schemeGreys[9] e d3.schemeTableau10) e vengono reimpostati da js/app.js
-   leggendo direttamente le palette d3; qui servono solo come valore iniziale. */
+/* Palette d3, un significato per variabile; valori reimpostati da js/app.js. */
 :root {
-    /* --- codifiche di dati (compaiono in legenda) --- */
-    --c-select: #000000;     /* Greys[8]  candidato selezionato (click) */
-    --c-mvp: #525252;        /* Greys[6]  serie "MVP reale" nel line chart */
-    --c-context: #737373;    /* Greys[5]  altri candidati della stessa stagione */
-    --c-choice: #969696;     /* Greys[4]  scelta statistica / media di lega (tratteggio) */
-    --c-all: #bdbdbd;        /* Greys[3]  intero dataset (riferimento) */
-    --c-selection: #76b7b2;  /* Tableau10[3] selezione corrente (brush / filtri) */
-    /* --- struttura e interfaccia (non codificano dati) --- */
-    --c-ink: #252525;        /* Greys[7]  testo, assi, bordi di box/mediane, linee dello zero */
-    --c-text-muted: #525252; /* testo secondario */
-    --c-grid: #d9d9d9;       /* Greys[2]  separatori, tracce delle barre */
-    --c-bg: #f0f0f0;         /* Greys[1]  sfondi */
-    --c-white: #ffffff;      /* Greys[0] */
+    --c-select: #000000;     /* candidato selezionato */
+    --c-mvp: #525252;        /* serie MVP reale */
+    --c-context: #737373;    /* altri candidati della stagione */
+    --c-choice: #969696;     /* scelta statistica / media di lega */
+    --c-all: #bdbdbd;        /* intero dataset (riferimento) */
+    --c-selection: #76b7b2;  /* selezione corrente */
+    --c-ink: #252525;
+    --c-text-muted: #525252;
+    --c-grid: #d9d9d9;
+    --c-bg: #f0f0f0;
+    --c-white: #ffffff;
 }
 
 * {
@@ -80,8 +76,6 @@ body {
 .card h2 {
     font-size: 0.85rem;
     margin-bottom: 2px;
-    padding: 2px 6px;
-    border-radius: 24px;
 }
 
 .card h3 {
@@ -246,6 +240,13 @@ svg text {
     stroke-dasharray: 4;
 }
 
+/* Brush della timeline: sceglie stagioni, non candidati, quindi grigio e non teal. */
+#line-chart .brush .selection {
+    fill: var(--c-ink);
+    fill-opacity: 0.06;
+    stroke: var(--c-text-muted);
+}
+
 .series-winner {
     fill: none;
     stroke: var(--c-mvp);
@@ -261,22 +262,21 @@ svg text {
 
 .trend-line {
     fill: none;
-    stroke-width: 2px;
-    stroke-dasharray: 6,3;
+    stroke-width: 4px;
+    stroke-opacity: 0.5;
     pointer-events: none;
+}
+
+.trend-line.trend-reference {
+    stroke-dasharray: 7,4;
+}
+
+.trend-line.weak {
+    stroke-opacity: 0.25;
 }
 
 .trend-winner { stroke: var(--c-mvp); }
 .trend-reference { stroke: var(--c-choice); }
-
-.trend-label {
-    font-size: 10px;
-    font-weight: 600;
-    fill: var(--c-ink);
-    paint-order: stroke;
-    stroke: var(--c-white);
-    stroke-width: 3px;
-}
 
 .era-box {
     cursor: pointer;
@@ -350,10 +350,6 @@ svg text {
 
 .card .legend-shared {
     display: none;
-}
-
-.card.expanded .legend-shared {
-    display: flex;
 }
 
 .analytics-legend {
@@ -582,6 +578,18 @@ svg text {
     cursor: pointer;
 }
 
+.selection-mean {
+    fill: var(--c-selection);
+    fill-opacity: 0.85;
+    stroke: var(--c-white);
+    stroke-width: 0.8px;
+}
+
+.selection-mean:hover {
+    stroke: var(--c-ink);
+    stroke-width: 1.5px;
+}
+
 .winner-star.out-of-selection {
     opacity: 0.25;
 }
@@ -596,9 +604,28 @@ svg text {
 }
 
 .candidate-guide,
-.candidate-ring,
-.trend-label {
+.candidate-ring {
     pointer-events: none;
+}
+
+/* Altezza fissa: il testo della tendenza non cambia l'altezza del grafico. */
+.trend-readout {
+    height: 2.8em;
+    margin-top: 2px;
+    font-size: 0.78rem;
+    line-height: 1.4em;
+    color: var(--c-ink);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.trend-readout div {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.trend-readout svg {
+    vertical-align: middle;
 }
 
 .gap-line {
@@ -641,64 +668,6 @@ g.narrative-row:hover .row-hit { fill: var(--c-bg); }
 
 .card {
     position: relative;
-}
-
-.expand-btn {
-    position: absolute;
-    top: 8px;
-    right: 10px;
-    width: 26px;
-    height: 26px;
-    border: 1px solid var(--c-grid);
-    border-radius: 5px;
-    background: var(--c-white);
-    color: var(--c-ink);
-    font-size: 15px;
-    line-height: 1;
-    cursor: pointer;
-    z-index: 2;
-}
-
-.expand-btn:hover {
-    background: var(--c-bg);
-    border-color: var(--c-text-muted);
-}
-
-.modal-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(37, 37, 37, 0.6);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s ease;
-    z-index: 800;
-}
-
-body.modal-open .modal-backdrop {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-.card.expanded {
-    position: fixed;
-    inset: 4vh 4vw;
-    z-index: 900;
-    padding: 16px 20px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
-}
-
-.card.expanded h2 {
-    font-size: 1.2rem;
-    padding-right: 36px;
-}
-
-.card.expanded .expand-btn {
-    top: 14px;
-    right: 16px;
-}
-
-#pca-card h2, #pcp-card h2, #line-card h2, #boxplot-card h2 {
-    padding-right: 32px;
 }
 
 .box-outlier {

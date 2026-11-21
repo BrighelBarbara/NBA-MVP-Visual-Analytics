@@ -1,5 +1,4 @@
-// Tutti i colori vengono da palette di d3 (d3-scale-chromatic); ogni tinta ha un solo significato.
-// Ere: categorica Tableau10 (blu, verde, marrone), scelta per restare distinguibile anche con daltonismo.
+// Colori: solo palette d3, un significato per colore. Ere = Tableau10 (categorica).
 const ERA_COLORS = {
     "Pre-Analytics": d3.schemeTableau10[0],
     "Transition": d3.schemeTableau10[4],
@@ -7,23 +6,21 @@ const ERA_COLORS = {
 };
 const ERAS = Object.keys(ERA_COLORS);
 
-// Voto reale vs atteso: estremi della divergente PuOr (viola = sopra l'atteso, arancione = sotto).
-// Le varianti chiare (stessa tinta, stesso significato) servono solo su sfondo scuro (tooltip).
+// Narrativa (voto reale − atteso): PuOr divergente, viola = sopra l'atteso, arancione = sotto.
 const RESIDUAL_COLORS = { positive: d3.schemePuOr[9][0], negative: d3.schemePuOr[9][8] };
 const RESIDUAL_COLORS_LIGHT = { positive: d3.schemePuOr[9][2], negative: d3.schemePuOr[9][6] };
 const residualColor = d => (d.Narrative >= 0 ? RESIDUAL_COLORS.positive : RESIDUAL_COLORS.negative);
 
-// Grigi da d3.schemeGreys[9] + una tinta Tableau10 libera: UN significato per colore.
-// I valori sono esposti al CSS come variabili --c-* (vedi :root in styles.css).
+// Grigi d3.schemeGreys + selezione Tableau10; esposti al CSS come variabili --c-*.
 const GREYS = d3.schemeGreys[9];
 const COLORS = {
-    select: GREYS[8],                   // candidato selezionato (click)
-    ink: GREYS[7],                      // struttura: testo, assi, bordi di box e mediane, linee dello zero
-    mvp: GREYS[6],                      // serie "MVP reale" nel line chart
-    context: GREYS[5],                  // altri candidati della stessa stagione (pannello candidato)
-    choice: GREYS[4],                   // scelta statistica / media di lega (sempre tratteggiata)
-    all: GREYS[3],                      // intero dataset, come riferimento
-    grid: GREYS[2],                     // separatori e tracce (interfaccia)
+    select: GREYS[8],                   // candidato selezionato
+    ink: GREYS[7],                      // testo, assi, bordi
+    mvp: GREYS[6],                      // serie MVP reale (line chart)
+    context: GREYS[5],                  // altri candidati della stagione
+    choice: GREYS[4],                   // scelta statistica / media di lega
+    all: GREYS[3],                      // intero dataset (riferimento)
+    grid: GREYS[2],                     // separatori (interfaccia)
     bg: GREYS[1],                       // sfondi (interfaccia)
     white: GREYS[0],
     selection: d3.schemeTableau10[3],   // selezione corrente (brush / filtri)
@@ -60,10 +57,9 @@ let globalVoteModel = null;
 const keyOf = d => `${d.Player}_${d.Season}`;
 const fmtPct = v => `${(v * 100).toFixed(0)}%`;
 const fmtPctPrecise = v => `${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%`;
-// Costante di d3.symbolStar: raggio esterno = sqrt(size · STAR_KA).
+// d3.symbolStar: raggio esterno = sqrt(size · STAR_KA).
 const STAR_KA = 0.89081309152928522810;
 const fmtSigned = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}`;
-// Glifo colorato per le note di legenda testuali (stesso colore usato nel grafico).
 const swatch = (color, glyph) => `<span style="color:${color}">${glyph}</span>`;
 
 const filters = { pca: null, pcp: null, era: null };
@@ -95,10 +91,8 @@ Promise.all([
     });
 
     globalData = data;
-    // Dimensione a intervalli (5 classi di share): pochi livelli ben distinguibili.
-    // Il raggio di ogni classe ha AREA proporzionale al valore centrale della classe
-    // (scala sqrt da 0), con un minimo di 3 px per la visibilità.
-    // Soglie fisse sull'intero dataset: filtri e brushing non cambiano le dimensioni.
+    // Dimensione per 5 classi di share: area proporzionale al centro della classe,
+    // soglie fisse sull'intero dataset (i filtri non cambiano le dimensioni).
     const maxShare = d3.max(data, d => d.MVP_Share) || 1;
     const areaScale = d3.scaleSqrt().domain([0, maxShare]).range([0, SHARE_R_MAX]);
     const edges = [0, ...SHARE_BINS, maxShare];
@@ -111,7 +105,7 @@ Promise.all([
     prepareVoteModel(insights.vote_model);
 
     renderLegend();
-    setupExpandableCards();
+    setupEscapeReset();
     setupDeselectOnEmptyClick();
     renderAllCharts();
     d3.select("#reset-all-filters").on("click", (event) => {
@@ -204,30 +198,14 @@ function renderAllCharts() {
     }
 }
 
-const EXPANDABLE_CARDS = ["pca-card", "pcp-card", "line-card", "boxplot-card"];
-let expandedCard = null;
-
-function setupExpandableCards() {
-    d3.select("body").append("div").attr("class", "modal-backdrop")
-        .on("click", () => toggleExpand(null));
-    EXPANDABLE_CARDS.forEach(id => {
-        d3.select(`#${id}`).append("button")
-            .attr("class", "expand-btn")
-            .attr("type", "button")
-            .attr("title", "Espandi il grafico")
-            .attr("aria-label", "Espandi il grafico")
-            .text("⤢")
-            .on("click", () => toggleExpand(expandedCard === id ? null : id));
-    });
-    d3.select(window).on("keydown.expand", (event) => {
-        if (event.key !== "Escape") return;
-        if (expandedCard) toggleExpand(null);
-        else resetAllFilters();
+function setupEscapeReset() {
+    d3.select(window).on("keydown.reset", (event) => {
+        if (event.key === "Escape") resetAllFilters();
     });
 }
 
 const DESELECT_CARDS = ["pca-card", "pcp-card", "line-card", "boxplot-card"];
-const NO_CLEAR_TARGETS = ".brush, .polyline, .vote-seg, .axis-label, .legend, .era-box, .share-box, .box-outlier, .winner-star, a, button";
+const NO_CLEAR_TARGETS = ".brush, .polyline, .vote-seg, .axis-label, .legend, .era-box, .share-box, .box-outlier, .winner-star, .selection-mean, a, button";
 
 function clearBrushes(root) {
     root.selectAll(".brush").each(function() {
@@ -271,35 +249,6 @@ function clearBrushOnClick(brushG, brush, onClear) {
         brushG.call(brush.move, null);
         if (onClear) onClear(src);
     });
-}
-
-function toggleExpand(id) {
-    const previous = expandedCard;
-    if (previous) {
-        d3.select(`#${previous}`).classed("expanded", false)
-            .select(".expand-btn").text("⤢").attr("title", "Espandi il grafico").attr("aria-label", "Espandi il grafico");
-    }
-    expandedCard = id;
-    d3.select("body").classed("modal-open", !!id);
-    if (id) {
-        d3.select(`#${id}`).classed("expanded", true)
-            .select(".expand-btn").text("✕").attr("title", "Chiudi (Esc)").attr("aria-label", "Chiudi");
-    }
-    [previous, id].filter(Boolean).forEach(rerenderCard);
-}
-
-function rerenderCard(id) {
-    hideTooltip();
-    if (id === "pca-card") {
-        filters.pca = null;
-        renderPCAScatterplot(globalData);
-    } else if (id === "pcp-card") {
-        filters.pcp = null;
-        renderParallelCoordinates(globalData);
-    }
-    applyFilters();
-    const record = selectedCandidateKey && globalData.find(d => keyOf(d) === selectedCandidateKey);
-    if (record) selectCandidate(record);
 }
 
 function applyFilters() {
@@ -353,7 +302,7 @@ function toggleEra(era) {
 
 const LEGEND_R = 4.5;
 let shareSizeScale;
-const SHARE_BINS = [0.05, 0.25, 0.5, 0.75];   // 5 intervalli di share
+const SHARE_BINS = [0.05, 0.25, 0.5, 0.75];
 const SHARE_R_MIN = 2.5;
 const SHARE_R_MAX = 8.5;
 function shareRadius(v) {
@@ -385,12 +334,12 @@ function renderCardLegend(target, items) {
         }
         if (item.type === "sizes") {
             legend.append("span").attr("class", "legend-heading").text(item.heading);
-            // Un cerchio per intervallo, con gli stessi raggi usati nel grafico.
-            item.scale.range().forEach((r, i) => {
+            (item.radii || item.scale.range()).forEach((r, i) => {
                 const el = legend.append("div").attr("class", "legend-item");
                 el.append("svg").attr("width", 2 * r + 2).attr("height", 2 * r + 2)
                     .append("circle").attr("cx", r + 1).attr("cy", r + 1).attr("r", r)
-                    .attr("fill", COLORS.white).attr("stroke", COLORS.ink).attr("stroke-width", 0.8);
+                    .attr("fill", item.fill || COLORS.white).attr("fill-opacity", item.fill ? 0.85 : 1)
+                    .attr("stroke", item.fill ? COLORS.white : COLORS.ink).attr("stroke-width", 0.8);
                 el.append("span").text(item.labels[i]);
             });
             return;
@@ -433,7 +382,7 @@ function renderCardLegend(target, items) {
             const line = icon.append("line").attr("x1", 1).attr("x2", 19).attr("y1", 7).attr("y2", 7);
             if (item.cls) line.attr("class", item.cls);
             else line.attr("stroke", item.color).attr("stroke-width", item.width || 2)
-                .attr("stroke-dasharray", item.dash || null);
+                .attr("stroke-dasharray", item.dash || null).attr("stroke-opacity", item.opacity ?? 1);
             if (item.star) icon.append("path").attr("transform", "translate(10,7)")
                 .attr("d", d3.symbol().type(d3.symbolStar).size(30)())
                 .attr("fill", COLORS.white).attr("stroke", COLORS.ink).attr("stroke-width", 0.8);
@@ -442,7 +391,7 @@ function renderCardLegend(target, items) {
     });
 }
 
-// Voci comuni mostrate nella sidebar; nelle card compaiono solo a grafico espanso.
+// Voci comuni a tutti i grafici: mostrate solo nella legenda della sidebar.
 function renderLegend() {
     renderCardLegend("#era-legend", [
         { type: "eras", heading: false },
@@ -521,9 +470,7 @@ function renderPCAScatterplot(data) {
         .domain(d3.extent(data, d => d.PC2)).nice()
         .range([height, 0]);
 
-    // La dimensione codifica la share con l'AREA (vedi legenda): stella (MVP) e cerchio
-    // hanno la stessa area a parità di intervallo (d3.symbol().size è un'area), così una
-    // stella non appare più piccola di un cerchio con share minore.
+    // Area proporzionale alla share, uguale per stella (MVP) e cerchio.
     const symbolGenerator = d3.symbol()
         .type(d => d.Is_MVP_Winner === 1 ? d3.symbolStar : d3.symbolCircle)
         .size(d => {
@@ -861,14 +808,22 @@ function formatMetric(metric, v) {
     return Math.abs(v) >= 10 ? v.toFixed(1) : v.toFixed(3);
 }
 
+const SEL_MEAN_MIN_N = 2;
+// Punto-media: area proporzionale al numero di candidati della stagione (minimo 4 px).
+const SEL_MEAN_MAX_N = 18;
+const selMeanScale = d3.scaleSqrt().domain([0, SEL_MEAN_MAX_N]).range([0, 9]);
+const selMeanRadius = n => Math.max(4, selMeanScale(n));
+const SEL_MEAN_LEGEND_N = [3, 6, 12, 18];
+// R² minimo perché una tendenza non sia segnalata come debole.
+const TREND_R2_MIN = 0.3;
+
 function renderLineChart(data) {
     const metric = currentMetric;
     const choiceMode = metric === "Expected_Share";
     const hasLeague = leagueAverages[seasonsSorted[0]][metric] !== undefined;
     const refLabel = choiceMode ? "scelta statistica" : hasLeague ? "media di lega" : "media dei candidati";
     const filtered = data.length !== globalData.length;
-    // Coordinamento con la PCA: le stelle degli MVP dentro la selezione restano piene,
-    // le altre si sbiadiscono; il contatore dice quanti MVP hanno il profilo selezionato.
+    // Coordinamento con la PCA: MVP fuori dalla selezione sbiaditi.
     const selectedKeys = new Set(data.map(keyOf));
     const inSelection = rec => !filtered || selectedKeys.has(keyOf(rec));
     const mvpTotal = globalData.filter(d => d.Is_MVP_Winner === 1).length;
@@ -880,8 +835,13 @@ function renderLineChart(data) {
         { type: "eras" },
         { type: "line", cls: "series-winner", star: true, text: "MVP reale" },
         { type: "line", cls: "series-reference", text: refLabel.charAt(0).toUpperCase() + refLabel.slice(1) },
+        { type: "line", color: COLORS.mvp, width: 4, opacity: 0.5, text: "Tendenza (stesso tratto della serie)" },
     ];
-    if (filtered) legendItems.push({ type: "star", fill: COLORS.ink, stroke: "none", opacity: 0.3, text: "MVP fuori dalla selezione (sbiadita)" });
+    if (filtered) legendItems.push(
+        { type: "star", fill: COLORS.ink, stroke: "none", opacity: 0.3, text: "MVP fuori dalla selezione (sbiadita)" },
+        { type: "sizes", heading: "Media selezione per stagione · area = n candidati:",
+          fill: COLORS.selection, radii: SEL_MEAN_LEGEND_N.map(selMeanRadius),
+          labels: SEL_MEAN_LEGEND_N.map(n => (n === 3 ? "n=2–3" : `n=${n}`)) });
     if (candidate) legendItems.push({ type: "circle", stroke: COLORS.select, strokeWidth: 2, fill: "none", text: `${candidate.Player} (selezionato)` });
     renderCardLegend("#line-legend", legendItems);
 
@@ -906,7 +866,13 @@ function renderLineChart(data) {
                 : d3.mean(globalData.filter(d => d.Season === season), d => d[metric]),
     }));
     const valid = v => v !== null && v !== undefined && !Number.isNaN(v);
-    const allValues = [...winners, ...reference].map(p => p.value).filter(valid);
+    // Media per stagione come punti, non linea: con pochi candidati per stagione una linea
+    // suggerirebbe una tendenza continua. Stagioni con meno di SEL_MEAN_MIN_N omesse.
+    const selectionMeans = filtered ? seasonsSorted.map(season => {
+        const vals = data.filter(d => d.Season === season).map(d => d[metric]).filter(valid);
+        return { season, n: vals.length, value: d3.mean(vals) };
+    }).filter(p => p.n >= SEL_MEAN_MIN_N) : [];
+    const allValues = [...winners, ...reference, ...selectionMeans].map(p => p.value).filter(valid);
     if (candidate && valid(candidate[metric])) allValues.push(candidate[metric]);
     if (allValues.length < 2) {
         container.append("p").attr("class", "card-desc").text("Dati insufficienti per questa statistica.");
@@ -940,7 +906,7 @@ function renderLineChart(data) {
         .x(p => xScale(p.season))
         .y(p => yScale(p.value))(series);
 
-    // Livello sotto il brush: linee non interattive.
+    // Sotto il brush: elementi non interattivi.
     svg.append("path").attr("class", "series-reference").attr("d", lineOf(reference));
     svg.append("path").attr("class", "series-winner").attr("d", lineOf(winners));
     const hasCandidate = candidate && valid(candidate[metric]);
@@ -951,11 +917,13 @@ function renderLineChart(data) {
             .attr("stroke", SELECT_COLOR).attr("stroke-width", 1).attr("stroke-dasharray", "3,3");
     }
 
+    const trendReadout = d3.select("#line-trend").html("");
     let hadTrend = false;
     const brush = d3.brushX()
         .extent([[0, 0], [width, plotH]])
         .on("end", (event) => {
-            svg.selectAll(".trend-line, .trend-label").remove();
+            svg.selectAll(".trend-line").remove();
+            trendReadout.html("");
             updateResetLink();
             const wasTrend = hadTrend;
             hadTrend = !!event.selection;
@@ -967,38 +935,53 @@ function renderLineChart(data) {
             const [x0, x1] = event.selection;
             const inRange = s => seasonsSorted.map((season, idx) => ({ season, idx, value: s[idx].value }))
                 .filter(p => xScale(p.season) >= x0 && xScale(p.season) <= x1 && valid(p.value));
+            const refName = choiceMode ? "Scelta stat." : hasLeague ? "Lega" : "Candidati";
             const fits = [
                 { name: "MVP", pts: inRange(winners), cls: "trend-winner" },
-                { name: choiceMode ? "Scelta stat." : hasLeague ? "Lega" : "Candidati", pts: inRange(reference), cls: "trend-reference" },
+                { name: refName, pts: inRange(reference), cls: "trend-reference" },
             ].map(f => ({ ...f, reg: linearRegression(f.pts.map(p => [p.idx, p.value])) }))
-                .filter(f => f.reg && f.pts.length >= 3);
+                .filter(f => f.reg && f.pts.length >= 3)
+                .map(f => ({ ...f, weak: f.reg.r2 < TREND_R2_MIN }));
             if (fits.length === 0) return;
 
-            fits.forEach(f => {
-                svg.insert("path", ".line-marks")
-                    .attr("class", `trend-line ${f.cls}`)
-                    .attr("d", d3.line().x(p => xScale(p.season)).y(p => yScale(f.reg.predict(p.idx)))(f.pts));
-            });
+            // Regressione lineare sul periodo selezionato: stesso tratto della serie, più chiara se R² basso.
             const perSeason = v => (PCT_METRICS.includes(metric)
                 ? `${d3.format("+.2r")(v * 100)} pt%`
                 : d3.format("+.2r")(v));
-            svg.insert("text", ".line-marks")
-                .attr("class", "trend-label")
-                .attr("x", Math.min(Math.max((x0 + x1) / 2, 120), width - 120)).attr("y", 10)
-                .attr("text-anchor", "middle")
-                .text(fits.map(f => `${f.name} ${perSeason(f.reg.slope)}/stag. (R²=${f.reg.r2.toFixed(2)})`).join(" · "));
+            fits.forEach(f => {
+                svg.insert("path", ".line-marks")
+                    .attr("class", `trend-line ${f.cls}`)
+                    .classed("weak", f.weak)
+                    .attr("d", d3.line().x(p => xScale(p.season)).y(p => yScale(f.reg.predict(p.idx)))(f.pts));
+            });
+            const pts0 = fits[0].pts;
+            const period = `${pts0[0].season} → ${pts0[pts0.length - 1].season}`;
+            const sample = cls => `<svg width="22" height="8"><line class="trend-line ${cls}" x1="1" x2="21" y1="4" y2="4"/></svg>`;
+            trendReadout.html(fits.map(f =>
+                `<div>${sample(f.cls)} <b>${f.name}</b> ${perSeason(f.reg.slope)} a stagione ` +
+                `<span class="muted">(${period} · R² ${f.reg.r2.toFixed(2)}${f.weak ? ", tendenza debole" : ""})</span></div>`).join(""));
         });
     const lineBrushG = svg.append("g").attr("class", "brush").call(brush);
     lineBrushG.node().__brushBehavior = brush;
     clearBrushOnClick(lineBrushG, brush);
 
-    // Livello sopra il brush: punti e stelle cliccabili (click = dettaglio del candidato).
+    // Sopra il brush: elementi cliccabili.
     const marks = svg.append("g").attr("class", "line-marks");
     const bindCandidate = (sel, rec) => sel
         .on("click", (event, d) => { event.stopPropagation(); toggleCandidate(rec(d)); })
         .on("mouseenter mousemove", (event, d) => showTooltip(candidateTooltipHtml(rec(d)), event))
         .on("mouseleave", hideTooltip);
 
+    marks.selectAll(".selection-mean")
+        .data(selectionMeans)
+        .enter().append("circle")
+        .attr("class", "selection-mean")
+        .attr("cx", p => xScale(p.season)).attr("cy", p => yScale(p.value))
+        .attr("r", p => selMeanRadius(p.n))
+        .on("click", event => event.stopPropagation())
+        .on("mouseenter mousemove", (event, p) => showTooltip(
+            `<strong>Media selezione · ${p.season}</strong><br>${label(metric)} ${formatMetric(metric, p.value)} · n=${p.n} candidati`, event))
+        .on("mouseleave", hideTooltip);
 
     const star = d3.symbol().type(d3.symbolStar).size(85);
     bindCandidate(marks.selectAll(".winner-star")
@@ -1023,8 +1006,7 @@ function renderLineChart(data) {
     }
 }
 
-// Statistiche di Tukey: i baffi arrivano all'ultimo dato entro 1,5×IQR dal box,
-// i valori oltre sono outlier.
+// Statistiche di Tukey: baffi fino all'ultimo dato entro 1,5×IQR, oltre = outlier.
 function boxStats(sorted) {
     const q1 = d3.quantile(sorted, 0.25);
     const median = d3.quantile(sorted, 0.5);
@@ -1035,7 +1017,6 @@ function boxStats(sorted) {
     return { q1, median, q3, lo, hi };
 }
 
-// Baffi come due segmenti separati (lo→Q1 e Q3→hi): la linea non attraversa il box.
 function drawWhiskers(g, cx, capW, yScale, { lo, q1, q3, hi }) {
     [[lo, q1], [q3, hi]].forEach(([a, b]) => g.append("line")
         .attr("x1", cx).attr("x2", cx).attr("y1", yScale(a)).attr("y2", yScale(b)).attr("stroke", COLORS.ink));
@@ -1045,9 +1026,7 @@ function drawWhiskers(g, cx, capW, yScale, { lo, q1, q3, hi }) {
 }
 
 const OUTLIER_R = 2.5;
-// Outlier in un'unica colonna sull'asse del box (come nelle slide). Un punto viene
-// affiancato (alternando destra/sinistra) SOLO se si sovrapporrebbe a uno già disegnato,
-// come nel dot plot delle slide: gli outlier isolati restano sulla colonna.
+// Outlier in colonna sull'asse del box, spostati di lato solo se si sovrappongono.
 function dodgeOutliers(ys, maxSpread) {
     const minDist = 2 * OUTLIER_R + 0.5;
     const step = minDist;
@@ -1087,9 +1066,7 @@ function renderBoxPlot(data) {
     const metric = currentMetric === "Expected_Share" ? "PIE" : currentMetric;
     const shareMetric = fourthBoxMetric(metric);
     d3.select("#boxplot-title").text(`${label(metric)} per era · ${label(shareMetric)}`);
-    d3.select("#boxplot-desc").html(shareMetric === "Narrative"
-        ? `Click su un box per filtrare l'era · a destra la narrativa (share reale − attesa) della selezione: sopra lo 0 votata più delle statistiche.`
-        : `Click su un box per filtrare l'era · a destra la ${label(shareMetric).toLowerCase()} della selezione corrente (asse proprio).`);
+    d3.select("#boxplot-desc").text(`Click su un box per filtrare l'era · a destra la ${label(shareMetric).toLowerCase()} della selezione`);
 
     renderCardLegend("#boxplot-legend", [
         { type: "eras" },
@@ -1116,8 +1093,7 @@ function renderBoxPlot(data) {
     const { width, height } = chartSize(container, margin);
     const svg = appendSvg(container, width, height, margin);
 
-    // Il 4° box (share) è una vista affiancata con un asse PROPRIO:
-    // la share ha un'unità diversa dalla metrica delle ere, quindi non condivide l'asse y.
+    // 4° box: asse y proprio, perché ha un'unità diversa dalla metrica delle ere.
     const SHARE_AXIS_W = 44, SHARE_GAP = 14;
     const sharePanelW = Math.max(50, width * 0.2);
     const mainW = Math.max(60, width - SHARE_GAP - SHARE_AXIS_W - sharePanelW);
@@ -1162,22 +1138,17 @@ function renderBoxPlot(data) {
     });
 }
 
-// Il 4° box mostra la Narrativa = share reale − share attesa: un solo box che contiene
-// entrambe le share (valore derivato, grafico di deviazione con baseline 0).
-// Fallback sulla share reale solo se le ere stanno già mostrando la Narrativa.
+// 4° box: Narrativa della selezione (share reale se le ere mostrano già la Narrativa).
 function fourthBoxMetric(metric) {
     return metric === "Narrative" ? "MVP_Share" : "Narrative";
 }
 
-// 4° boxplot: distribuzione della Narrativa nella selezione corrente (tutte le ere,
-// o solo l'era filtrata). Si aggiorna con brush, filtro PCP e filtro era (viste coordinate).
 function renderShareBox(svg, data, { metric, x0, panelW, axisW, height, boxWidth }) {
     const shareMetric = fourthBoxMetric(metric);
     const fmt = v => formatMetric(shareMetric, v);
     const valid = v => v !== null && v !== undefined && !Number.isNaN(v);
 
-    // Dominio FISSO sull'intero dataset: il box si muove con i filtri, l'asse no,
-    // così selezioni diverse restano confrontabili.
+    // Dominio fisso sull'intero dataset: selezioni diverse restano confrontabili.
     const yShare = d3.scaleLinear()
         .domain([Math.min(0, d3.min(globalData, d => d[shareMetric])), d3.max(globalData, d => d[shareMetric])])
         .nice().range([height, 0]);
@@ -1185,7 +1156,6 @@ function renderShareBox(svg, data, { metric, x0, panelW, axisW, height, boxWidth
     const panel = svg.append("g").attr("class", "share-panel").attr("transform", `translate(${x0},0)`);
     panel.append("line").attr("class", "share-divider")
         .attr("x1", -axisW - 7).attr("x2", -axisW - 7).attr("y1", 0).attr("y2", height + 20);
-    // Etichette compatte (+0.4, 0, −0.4) e titolo breve: non si sovrappongono all'asse.
     const tickFmt = shareMetric === "Narrative"
         ? v => (v === 0 ? "0" : `${v > 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}`)
         : v => formatMetric(shareMetric, v);
@@ -1206,8 +1176,7 @@ function renderShareBox(svg, data, { metric, x0, panelW, axisW, height, boxWidth
     const values = rows.map(d => d[shareMetric]).sort(d3.ascending);
     if (values.length === 0) return;
 
-    // Box di riferimento (intero dataset): solo contorno grigio, più largo e disegnato
-    // sotto, così lo spostamento della selezione rispetto al totale si legge subito.
+    // Box di riferimento dell'intero dataset, disegnato sotto quello della selezione.
     const isFiltered = data.length < globalData.length;
     const refValues = globalData.map(d => d[shareMetric]).filter(valid).sort(d3.ascending);
     const ref = boxStats(refValues);
@@ -1246,8 +1215,7 @@ function renderShareBox(svg, data, { metric, x0, panelW, axisW, height, boxWidth
 
 const COEF_SCALE_MAX = 0.3;
 
-// Barra su una scala [0, max]: un valore fuori scala non viene tagliato in silenzio
-// ma segnalato con "<0" (negativo) o "›" (oltre il massimo). Ritorna true se fuori scala.
+// Valori fuori scala segnalati con "<0" o "›" invece di essere tagliati.
 function boundedBar(g, x0, y, h, value, scale) {
     const [d0, d1] = scale.domain();
     const bar = g.append("rect").attr("x", x0).attr("y", y).attr("height", h).attr("rx", 1.5)
@@ -1481,12 +1449,9 @@ function renderPlayerVsWinnersBoxPlot(player) {
     const winnerVals = winners.map(w => w[metric]).filter(v => v !== null && !Number.isNaN(v)).sort(d3.ascending);
 
     d3.select("#boxplot-title").text(`${player.Player} (${player.Season}) vs MVP — ${era}`);
-    d3.select("#boxplot-desc").html(
-        `Box = ${label(metric)} dei vincitori MVP dell'era (n=${winnerVals.length}); ` +
-        (hasPlayerVal
-            ? `linea nera tratteggiata = <strong>${player.Player}</strong>. `
-            : `${label(metric)} non disponibile per <strong>${player.Player}</strong>.`)
-    );
+    d3.select("#boxplot-desc").html(hasPlayerVal
+        ? `${label(metric)} di ${winnerVals.length} vincitori MVP dell'era`
+        : `${label(metric)} non disponibile per <strong>${player.Player}</strong>`);
 
     renderCardLegend("#boxplot-legend", [
         { type: "rect", fill: ERA_COLORS[era], opacity: 0.6, stroke: COLORS.ink, text: `Vincitori MVP ${era} (box)` },
