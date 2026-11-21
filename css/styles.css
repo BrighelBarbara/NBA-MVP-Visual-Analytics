@@ -237,7 +237,6 @@ svg text {
     fill: var(--c-selection);
     fill-opacity: 0.15;
     stroke: black;
-    /*stroke: var(--c-selection);*/
     stroke-dasharray: 4;
 }
 
