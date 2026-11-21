@@ -404,6 +404,18 @@ function renderCardLegend(target, items) {
             .attr("width", wide ? 20 : isSymbol ? iconSize : 14)
             .attr("height", isSymbol ? iconSize : 14);
         if (item.type === "star" || item.type === "circle") {
+            if (item.type === "circle" && item.exactCircle) {
+                icon.append("circle")
+                    .attr("cx", iconSize / 2)
+                    .attr("cy", iconSize / 2)
+                    .attr("r", iconRadius)
+                    .attr("fill", item.fill || COLORS.white)
+                    .attr("stroke", item.stroke || COLORS.ink)
+                    .attr("stroke-width", item.strokeWidth ?? 1)
+                    .attr("opacity", item.opacity ?? 1);
+                el.append("span").text(item.text);
+                return;
+            }
             const type = item.type === "star" ? d3.symbolStar : d3.symbolCircle;
             const size = item.type === "star" ? (iconRadius * iconRadius) / STAR_KA : Math.PI * iconRadius * iconRadius * 0.8;
             icon.append("path")
@@ -441,8 +453,8 @@ function renderLegend() {
         { type: "rect", fill: COLORS.selection, opacity: 0.7, text: "Selezione corrente (brush / filtri)" },
     ]);
     renderCardLegend("#vote-legend", [
-        { type: "circle", text: "Sotto le aspettative", fill: RESIDUAL_COLORS.negative, stroke: "none", radius: 5 },
-        { type: "circle", text: "Sopra le aspettative", fill: RESIDUAL_COLORS.positive, stroke: "none", radius: 5 },
+        { type: "circle", text: "Sotto le aspettative", fill: RESIDUAL_COLORS.negative, stroke: "none", radius: 5.5, exactCircle: true },
+        { type: "circle", text: "Sopra le aspettative", fill: RESIDUAL_COLORS.positive, stroke: "none", radius: 5.5, exactCircle: true },
     ]);
     renderCardLegend("#pca-legend", [
         { type: "eras" },
