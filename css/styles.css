@@ -1,3 +1,22 @@
+/* Palette: ogni variabile ha UN solo significato. I valori sono quelli di d3
+   (d3.schemeGreys[9] e d3.schemeTableau10) e vengono reimpostati da js/app.js
+   leggendo direttamente le palette d3; qui servono solo come valore iniziale. */
+:root {
+    /* --- codifiche di dati (compaiono in legenda) --- */
+    --c-select: #000000;     /* Greys[8]  candidato selezionato (click) */
+    --c-mvp: #525252;        /* Greys[6]  serie "MVP reale" nel line chart */
+    --c-context: #737373;    /* Greys[5]  altri candidati della stessa stagione */
+    --c-choice: #969696;     /* Greys[4]  scelta statistica / media di lega (tratteggio) */
+    --c-all: #bdbdbd;        /* Greys[3]  intero dataset (riferimento) */
+    --c-selection: #76b7b2;  /* Tableau10[3] selezione corrente (brush / filtri) */
+    /* --- struttura e interfaccia (non codificano dati) --- */
+    --c-ink: #252525;        /* Greys[7]  testo, assi, bordi di box/mediane, linee dello zero */
+    --c-text-muted: #525252; /* testo secondario */
+    --c-grid: #d9d9d9;       /* Greys[2]  separatori, tracce delle barre */
+    --c-bg: #f0f0f0;         /* Greys[1]  sfondi */
+    --c-white: #ffffff;      /* Greys[0] */
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -10,8 +29,8 @@ html, body {
 }
 
 body {
-    background-color: #f4f6f9;
-    color: #333;
+    background-color: var(--c-bg);
+    color: var(--c-ink);
     padding: 10px 12px 0;
     display: flex;
     flex-direction: column;
@@ -19,8 +38,8 @@ body {
 }
 
 .navbar {
-    background: #1a252f;
-    color: white;
+    background: var(--c-ink);
+    color: var(--c-white);
     padding: 6px 16px;
     border-radius: 8px;
     display: flex;
@@ -30,12 +49,12 @@ body {
 }
 
 .navbar h1 {
-    font-size: 1.15rem;
+    font-size: 0.85rem;
 }
 
 .subtitle {
     font-size: 0.82rem;
-    color: #bdc3c7;
+    color: var(--c-grid);
 }
 
 .dashboard-grid {
@@ -48,7 +67,7 @@ body {
 }
 
 .card {
-    background: white;
+    background: var(--c-white);
     padding: 10px 12px;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
@@ -59,21 +78,23 @@ body {
 }
 
 .card h2 {
-    font-size: 0.98rem;
+    font-size: 0.85rem;
     margin-bottom: 2px;
+    padding: 2px 6px;
+    border-radius: 24px;
 }
 
 .card h3 {
     font-size: 0.82rem;
     margin: 9px 0 4px;
     padding-top: 7px;
-    border-top: 1px solid #ecf0f1;
-    color: #1a252f;
+    border-top: 1px solid var(--c-bg);
+    color: var(--c-ink);
 }
 
 .card-desc {
     font-size: 0.72rem;
-    color: #7f8c8d;
+    color: var(--c-text-muted);
     margin-bottom: 4px;
     line-height: 1.3;
 }
@@ -127,19 +148,19 @@ svg text {
 }
 
 .point.hovered {
-    stroke: #1a252f !important;
+    stroke: var(--c-ink) !important;
     stroke-width: 2px !important;
     opacity: 1 !important;
 }
 
 .point.selected-highlight {
-    stroke: #000 !important;
+    stroke: var(--c-select) !important;
     stroke-width: 3px !important;
     opacity: 1 !important;
 }
 
 .season-link {
-    stroke: #555;
+    stroke: var(--c-choice);
     stroke-width: 1.5px;
     stroke-dasharray: 4,3;
     pointer-events: none;
@@ -147,7 +168,7 @@ svg text {
 
 .season-link-end {
     fill: none;
-    stroke: #555;
+    stroke: var(--c-choice);
     stroke-width: 1.5px;
     pointer-events: none;
 }
@@ -155,30 +176,11 @@ svg text {
 .season-link-label {
     font-size: 10px;
     font-weight: 700;
-    fill: #1a252f;
+    fill: var(--c-ink);
     paint-order: stroke;
-    stroke: #fff;
+    stroke: var(--c-white);
     stroke-width: 3px;
     pointer-events: none;
-}
-
-.annotation {
-    pointer-events: none;
-}
-
-.annotation-label {
-    font-size: 10px;
-    fill: #1a252f;
-    font-weight: 600;
-    paint-order: stroke;
-    stroke: #fff;
-    stroke-width: 3px;
-}
-
-.annotation-leader {
-    stroke: #1a252f;
-    stroke-width: 1px;
-    stroke-dasharray: 2,2;
 }
 
 .polyline {
@@ -211,58 +213,50 @@ svg text {
 .axis-title {
     font-size: 10px;
     font-weight: 600;
-    fill: #34495e;
+    fill: var(--c-ink);
 }
 
 .axis-label.active-metric {
-    fill: #000;
+    fill: var(--c-ink);
     font-weight: 800;
     font-size: 11px;
 }
 
 .vote-band {
-    fill: #f4f6f9;
+    fill: var(--c-bg);
 }
 
 .vote-band-label {
     font-size: 9px;
     letter-spacing: 1px;
-    fill: #7f8c8d;
+    fill: var(--c-text-muted);
     font-weight: 700;
 }
 
 .zero-line {
-    stroke: #1a252f;
+    stroke: var(--c-ink);
     stroke-width: 1px;
     stroke-dasharray: 2,2;
 }
 
 .brush .selection {
-    fill: #7f8c8d;
+    fill: var(--c-selection);
     fill-opacity: 0.15;
-    stroke: #555;
+    stroke: var(--c-selection);
     stroke-dasharray: 4;
 }
 
 .series-winner {
     fill: none;
-    stroke: #1a252f;
+    stroke: var(--c-mvp);
     stroke-width: 1.6px;
 }
 
 .series-reference {
     fill: none;
-    stroke: #7f8c8d;
+    stroke: var(--c-choice);
     stroke-width: 1.6px;
     stroke-dasharray: 5,3;
-}
-
-.series-selection {
-    fill: none;
-    stroke: #555;
-    stroke-width: 2px;
-    stroke-dasharray: 1,3;
-    stroke-linecap: round;
 }
 
 .trend-line {
@@ -272,15 +266,15 @@ svg text {
     pointer-events: none;
 }
 
-.trend-winner { stroke: #1a252f; }
-.trend-reference { stroke: #7f8c8d; }
+.trend-winner { stroke: var(--c-mvp); }
+.trend-reference { stroke: var(--c-choice); }
 
 .trend-label {
     font-size: 10px;
     font-weight: 600;
-    fill: #1a252f;
+    fill: var(--c-ink);
     paint-order: stroke;
-    stroke: #fff;
+    stroke: var(--c-white);
     stroke-width: 3px;
 }
 
@@ -303,7 +297,7 @@ svg text {
 .share-ref-box line,
 .share-ref-box rect {
     fill: none;
-    stroke: #95a5a6;
+    stroke: var(--c-all);
     stroke-width: 1.2px;
     pointer-events: none;
 }
@@ -314,14 +308,14 @@ svg text {
 }
 
 .share-divider {
-    stroke: #bdc3c7;
+    stroke: var(--c-grid);
     stroke-width: 1px;
     stroke-dasharray: 3,3;
 }
 
 .share-box-label {
     font-size: 10px;
-    fill: #000;
+    fill: var(--c-ink);
 }
 
 .legend {
@@ -330,7 +324,7 @@ svg text {
     gap: 4px 12px;
     margin-bottom: 2px;
     font-size: 0.72rem;
-    color: #333;
+    color: var(--c-ink);
 }
 
 .legend-item {
@@ -344,13 +338,13 @@ svg text {
 
 .legend-heading {
     font-weight: 600;
-    color: #555;
+    color: var(--c-text-muted);
     align-self: center;
 }
 
 .legend-item.active {
-    border-color: #1a252f;
-    background: #ecf0f1;
+    border-color: var(--c-ink);
+    background: var(--c-bg);
     font-weight: 600;
 }
 
@@ -374,7 +368,7 @@ svg text {
     gap: 0;
     margin: 0;
     font-size: 0.82rem;
-    color: #333;
+    color: var(--c-ink);
 }
 
 .analytics-legend .legend-item {
@@ -413,7 +407,6 @@ svg text {
     flex-direction: column;
     flex-wrap: nowrap;
     align-items: stretch;
-    gap: 4px;
 }
 
 .analytics-legend #vote-legend .legend-item {
@@ -427,17 +420,17 @@ svg text {
 }
 
 .analytics-legend .legend-section + .legend-section {
-    border-top: 1px solid #ecf0f1;
+    border-top: 1px solid var(--c-bg);
     margin-top: 2px;
     padding-top: 1px;
 }
 
 .analytics-legend .legend-section h3 {
-    margin: 0;
+    margin-block: 4px;
     padding: 0;
     border: 0;
-    color: #555;
-    font-size: 0.78rem;
+    color: var(--c-text-muted);
+    font-size: 0.6rem;
     letter-spacing: 0.04em;
 }
 
@@ -448,7 +441,7 @@ svg text {
 .analytics-legend .legend-heading {
     align-self: flex-start;
     margin-top: 2px;
-    color: #555;
+    color: var(--c-text-muted);
 }
 
 .analytics-legend .legend-item {
@@ -456,8 +449,8 @@ svg text {
 }
 
 .analytics-legend .legend-item.active {
-    border-color: #1a252f;
-    background: #ecf0f1;
+    border-color: var(--c-ink);
+    background: var(--c-bg);
 }
 
 .analytics-legend .legend-swatch {
@@ -475,7 +468,7 @@ svg text {
 
 .info-box {
     position: relative;
-    background: #ecf0f1;
+    background: var(--c-bg);
     padding: 4px 7px;
     border-radius: 6px;
     margin-top: 4px;
@@ -491,7 +484,7 @@ svg text {
     border: none;
     border-radius: 50%;
     background: transparent;
-    color: #555;
+    color: var(--c-text-muted);
     font-size: 0.8rem;
     cursor: pointer;
 }
@@ -501,65 +494,47 @@ svg text {
 }
 
 .close-candidate:hover {
-    background: #d5dbdb;
-}
-
-.info-box .verdict {
-    display: inline-block;
-    margin-top: 3px;
+    background: var(--c-grid);
 }
 
 .muted {
-    color: #7f8c8d;
+    color: var(--c-text-muted);
 }
 
 .badge {
-    background: #1a252f;
-    color: #fff;
+    background: var(--c-ink);
+    color: var(--c-white);
     border-radius: 3px;
     padding: 0 4px;
     font-size: 0.68rem;
 }
 
-.pos { color: var(--pos); }
-.neg { color: var(--neg); }
-
 .panel-note {
     font-size: 0.74rem;
     line-height: 1.35;
-    color: #333;
+    color: var(--c-ink);
     margin-top: 3px;
 }
 
-.panel-note .warn {
-    color: #7f8c8d;
+.panel-note.warn {
+    color: var(--c-text-muted);
     font-style: italic;
 }
 
 .legend-note {
-    color: #7f8c8d;
+    color: var(--c-text-muted);
     font-size: 0.68rem;
 }
 
-.model-label, .model-value {
+.model-label {
     font-size: 10px;
-    fill: #333;
-}
-
-.model-value {
-    font-weight: 700;
+    fill: var(--c-ink);
 }
 
 .model-ref {
-    stroke: #1a252f;
+    stroke: var(--c-all);
     stroke-width: 2px;
 }
-
-.model-axis-note {
-    font-size: 9px;
-    fill: #7f8c8d;
-}
-
 
 .narrative-panel {
     display: grid;
@@ -571,39 +546,18 @@ svg text {
     grid-column: 1 / 3;
 }
 
-.narrative-head {
-    font-weight: 700;
-    font-size: 0.72rem;
-    margin-bottom: 2px;
-}
-
-.narrative-row {
-    font-size: 0.74rem;
-    white-space: nowrap;
-    display: flex;
-    gap: 4px;
-    justify-content: space-between;
-    cursor: pointer;
-    padding: 1px 3px;
-    border-radius: 3px;
-}
-
-.narrative-row:hover {
-    background: #ecf0f1;
-}
-
 .reset-link {
     display: inline-block;
     margin-top: 8px;
     font-size: 0.78rem;
-    color: #1a252f;
+    color: var(--c-ink);
 }
 
 .chart-tooltip {
     position: fixed;
     pointer-events: none;
-    background: #1a252f;
-    color: #fff;
+    background: var(--c-ink);
+    color: var(--c-white);
     padding: 6px 9px;
     border-radius: 5px;
     font-size: 0.75rem;
@@ -617,44 +571,42 @@ svg text {
 .direct-label {
     font-size: 9.5px;
     font-weight: 600;
-    fill: #555;
+    fill: var(--c-ink);
     paint-order: stroke;
-    stroke: #fff;
+    stroke: var(--c-white);
     stroke-width: 3px;
     pointer-events: none;
 }
 
 .selection-dot {
-    fill: #555;
+    fill: var(--c-selection);
+    fill-opacity: 0.8;
+    stroke: var(--c-white);
+    stroke-width: 0.5px;
+    cursor: pointer;
 }
 
-.narr-ring {
-    fill: none;
-    stroke-width: 1.6px;
-    pointer-events: none;
+.winner-star {
+    cursor: pointer;
 }
-.narr-ring.pos { stroke: var(--pos); }
-.narr-ring.neg { stroke: var(--neg); }
 
-.narr-label {
-    font-size: 10px;
-    font-weight: 700;
-    paint-order: stroke;
-    stroke: #fff;
-    stroke-width: 3px;
+.winner-star:hover,
+.selection-dot:hover {
+    stroke: var(--c-ink);
+    stroke-width: 1.5px;
+}
+
+.candidate-guide,
+.candidate-ring,
+.trend-label {
     pointer-events: none;
 }
-.narr-label.pos { fill: var(--pos); }
-.narr-label.neg { fill: var(--neg); }
 
 .gap-line {
-    stroke: #555;
-    stroke-width: 2.5px;
+    stroke: var(--c-choice);
+    stroke-width: 2px;
+    stroke-dasharray: 4,3;
 }
-
-
-
-
 
 .vote-seg {
     stroke-width: 1.3px;
@@ -672,20 +624,20 @@ svg text {
     opacity: 1 !important;
 }
 
-.bar-track { fill: #ecf0f1; }
-.bar-track-line { stroke: #d5dbdb; stroke-width: 6px; stroke-linecap: round; }
-.dot-expected { fill: #fff; stroke: #1a252f; stroke-width: 1.5px; }
-.dot-season { fill: #95a5a6; }
-.dot-choice { fill: none; stroke: #555; stroke-width: 1.6px; }
-.tick-mini { font-size: 8.5px; fill: #7f8c8d; }
+.bar-track { fill: var(--c-bg); }
+.bar-track-line { stroke: var(--c-grid); stroke-width: 6px; stroke-linecap: round; }
+.dot-expected { fill: var(--c-white); stroke: var(--c-ink); stroke-width: 1.5px; }
+.dot-season { fill: var(--c-context); }
+.dot-choice { fill: none; stroke: var(--c-choice); stroke-width: 1.6px; }
+.tick-mini { font-size: 8.5px; fill: var(--c-text-muted); }
 .row-hit { fill: transparent; }
 g.narrative-row { cursor: pointer; }
-g.narrative-row:hover .row-hit { fill: #ecf0f1; }
+g.narrative-row:hover .row-hit { fill: var(--c-bg); }
 .shift-layer { pointer-events: none; }
 .pc1-zero {
-    stroke: #95a5a6;
+    stroke: var(--c-ink);
     stroke-width: 1px;
-    stroke-dasharray: 2,3;
+    stroke-dasharray: 2,2;
 }
 
 .card {
@@ -698,10 +650,10 @@ g.narrative-row:hover .row-hit { fill: #ecf0f1; }
     right: 10px;
     width: 26px;
     height: 26px;
-    border: 1px solid #d5dbdb;
+    border: 1px solid var(--c-grid);
     border-radius: 5px;
-    background: #fff;
-    color: #1a252f;
+    background: var(--c-white);
+    color: var(--c-ink);
     font-size: 15px;
     line-height: 1;
     cursor: pointer;
@@ -709,14 +661,14 @@ g.narrative-row:hover .row-hit { fill: #ecf0f1; }
 }
 
 .expand-btn:hover {
-    background: #ecf0f1;
-    border-color: #95a5a6;
+    background: var(--c-bg);
+    border-color: var(--c-text-muted);
 }
 
 .modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(26, 37, 47, 0.6);
+    background: rgba(37, 37, 37, 0.6);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease;
@@ -751,8 +703,8 @@ body.modal-open .modal-backdrop {
 }
 
 .box-outlier {
-    fill: #fff;
-    stroke: #000;
+    fill: var(--c-white);
+    stroke: var(--c-ink);
     stroke-width: 1px;
     cursor: pointer;
 }
@@ -760,6 +712,6 @@ body.modal-open .modal-backdrop {
 .out-of-scale {
     font-size: 8px;
     font-weight: 700;
-    fill: #000;
+    fill: var(--c-ink);
     pointer-events: none;
 }

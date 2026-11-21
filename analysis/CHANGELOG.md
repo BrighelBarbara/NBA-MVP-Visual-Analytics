@@ -378,3 +378,48 @@ attivi; il brush della vista ridisegnata (PCA o PCP) viene azzerato.
 - **Tooltip:** share sotto il 10% con un decimale (`fmtPctPrecise`).
 - **Rimosso il link "torna al confronto per era"**: per tornare indietro
   restano "azzera tutti i filtri", Esc e il click sul vuoto.
+
+---
+
+## Revisione codifiche colore (regola "standard color encodings" e "missing legends")
+
+Tutti i colori vengono ora da palette d3 (`d3.schemeTableau10`, `d3.schemePuOr[9]`,
+`d3.schemeGreys[9]`), definiti una sola volta in `js/app.js` (`ERA_COLORS`,
+`RESIDUAL_COLORS`, `COLORS`) ed esposti al CSS come variabili `--c-*`. Nessun
+esadecimale scritto a mano resta in CSS o JS (eccetto le ombre). Ogni colore ha un solo significato:
+
+| Colore (d3) | Significato |
+|---|---|
+| Tableau10[0,4,8] blu/verde/marrone | era tattica (categorica) |
+| PuOr[9] viola / arancione | narrativa: voto reale sopra / sotto l'atteso (divergente, zero al centro) |
+| Tableau10[3] teal | selezione corrente (brush, punti dei candidati selezionati nel line chart, 4° box, barre del modello) |
+| Greys[8] nero | candidato selezionato con il click |
+| Greys[6] | serie "MVP reale" nel line chart |
+| Greys[5] | altri candidati della stessa stagione (pannello candidato) |
+| Greys[4] tratteggiato | scelta statistica / media di lega (termine di confronto) |
+| Greys[3] | intero dataset come riferimento (box di riferimento, tacca "|" del modello) |
+| Greys[7], [2], [1], [0] | solo struttura e interfaccia (testo, assi, bordi, sfondi) |
+
+Correzioni principali:
+- il bordo nero delle stelle MVP è stato rimosso (l'MVP è codificato dalla forma a stella):
+  il nero ora indica solo il candidato selezionato;
+- "scelta statistica" usa lo stesso grigio tratteggiato in PCA, line chart e pannello
+  candidato; "media selezione" non condivide più il grigio con la scelta statistica;
+- il 4° box del box plot ha sempre il colore della selezione: prima, con un'era filtrata,
+  diventava del colore dell'era mentre la legenda mostrava ancora il grigio;
+- le barre del modello non usano più tre grigi (uno dei quali era indistinguibile dal box share);
+- la parola "Snobbato" non usa più il colore della narrativa negativa;
+- legende completate: candidato selezionato, selezione corrente, PC1 = 0, altri candidati
+  della stagione, scarto scelta → MVP; le icone neutre (solo forma) riportano "(colore = era)";
+- rimosse le regole CSS non più usate (`.narr-*`, `.annotation*`, `.pos/.neg`,
+  `.model-value`, `.model-axis-note`, `.narrative-head`, `.info-box .verdict`); corretto il
+  selettore `.panel-note.warn`, che prima non veniva applicato.
+
+### Line chart: "media selezione" sostituita dai candidati selezionati
+La media per stagione dei candidati selezionati è stata rimossa: con brush mirati sulla
+PCA (es. guardie ad alto volume, PC1 < 0 e PC2 > 1) restano in mediana 2 candidati per
+stagione, con stagioni a 1 solo candidato e stagioni vuote, quindi la "media" era rumore
+e la linea aveva buchi. Ora ogni candidato selezionato è un punto teal sulla sua stagione:
+si vede chi della selezione arriva al livello della ★ dell'MVP. Punti e ★ sono cliccabili
+(dettaglio del candidato, coordinato con PCA, PCP, box plot e sidebar), così il line chart
+è coordinato in entrambe le direzioni. Anche la ★ dell'MVP nel pannello candidato è cliccabile.
