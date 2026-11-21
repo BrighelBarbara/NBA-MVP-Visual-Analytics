@@ -658,14 +658,14 @@ function renderParallelCoordinates(data) {
         .attr("x", voteX0).attr("y", -20)
         .attr("width", width - voteX0 + margin.right).attr("height", height + 34);
     svg.append("text").attr("class", "vote-band-label")
-        .attr("x", voteX0 + 4).attr("y", height + 14).text("VOTE");
+        .attr("x", voteX0 + 4).attr("y", height + 14).text("SHARE");
 
     const lineGenerator = d3.line()
         .defined(p => p[1] !== null && !Number.isNaN(p[1]))
         .x(p => p[0])
         .y(p => p[1]);
 
-    // The polyline (color = era) stops at the Expected axis; the VOTE band is drawn by .vote-seg (color = narrative).
+    // The polyline (color = era) stops at the Expected axis; the SHARE band is drawn by .vote-seg (color = narrative).
     const lineDims = dimensions.slice(0, dimensions.indexOf("MVP_Share"));
     function path(d) {
         return lineGenerator(lineDims.map(p => [
@@ -1395,9 +1395,10 @@ function renderCandidatePanel(d) {
         .attr("text-anchor", t === 0 ? "start" : t === 1 ? "end" : "middle").text(fmtPct(t)));
 
     box.append("p").attr("class", "legend-note").html(
-        `○ expected · ${swatch(residualColor(d), "●")} actual · ★ MVP (expected vote)` +
-        `${d.Is_MVP_Winner !== 1 ? " · <b>◯</b> selected player" : ""}` +
-        ` · ${swatch(COLORS.context, "●")} other candidates`);
+        [`○ expected`, `${swatch(residualColor(d), "●")} actual`, `★ MVP (expected vote)`,
+            ...(d.Is_MVP_Winner !== 1 ? [`<b>◯</b> selected player`] : []),
+            `${swatch(COLORS.context, "●")} other candidates`]
+            .map(t => `<span class="note-item">${t}</span>`).join(""));
 
     const gap = Math.round(d.Narrative * 100);
     box.append("p").attr("class", "panel-note").html(

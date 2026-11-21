@@ -123,7 +123,7 @@ body {
 }
 #sidebar-card h3 {
     margin: 3px 0 1px;
-    padding-top: 2px;
+    padding-top: 6px;
 }
 #line-card { grid-column: 1 / 2; grid-row: 2 / 3; }
 #boxplot-card { grid-column: 2 / 3; grid-row: 2 / 3; }
@@ -518,6 +518,12 @@ svg text {
     font-style: italic;
 }
 
+.note-item {
+    display: inline-block;
+    margin-right: 10px;
+    white-space: nowrap;
+}
+
 .legend-note {
     color: var(--c-text-muted);
     font-size: 0.68rem;
@@ -629,7 +635,7 @@ svg text {
     vertical-align: middle;
 }
 
-/* Same weight as .polyline: in the VOTE band the line only changes color (era → narrative). */
+/* Same weight as .polyline: in the SHARE band the line only changes color (era → narrative). */
 .vote-seg {
     stroke-width: 1px;
     opacity: 0.16;
