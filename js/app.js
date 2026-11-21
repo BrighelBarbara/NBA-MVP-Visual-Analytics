@@ -393,7 +393,7 @@ function renderLegend() {
         { type: "eras", heading: false },
     ]);
     renderCardLegend("#symbol-legend", [
-        { type: "star", text: "Actual MVP (color = era)", radius: 6 },
+        { type: "star", text: "Actual MVP", radius: 6 },
         { type: "circle", text: "Selected candidate", stroke: COLORS.select, strokeWidth: 2.5, radius: 5 },
         { type: "rect", fill: COLORS.selection, opacity: 0.7, text: "Current selection (brush / filters)" },
     ]);
@@ -403,15 +403,14 @@ function renderLegend() {
     ]);
     renderCardLegend("#pca-legend", [
         { type: "eras" },
-        { type: "star", text: "Actual MVP (color = era)", shared: true },
+        { type: "star", text: "Actual MVP", shared: true },
         { type: "circle", text: "Selected", stroke: COLORS.select, strokeWidth: 2.5, shared: true },
         { type: "sizes", heading: "Area = MVP vote share (% of points received):",
           scale: shareSizeScale, labels: shareClassLabels() },
     ]);
     renderCardLegend("#pcp-legend", [
         { type: "eras" },
-        { type: "line", color: COLORS.ink, width: 2.5, text: "Actual MVP (thick, color = era)" },
-        { type: "line", color: COLORS.ink, width: 4, text: "Selected (others fade)" },
+        { type: "line", color: COLORS.ink, width: 2.5, text: "Actual MVP (thick)" },
     ]);
 }
 
@@ -666,8 +665,10 @@ function renderParallelCoordinates(data) {
         .x(p => p[0])
         .y(p => p[1]);
 
+    // The polyline (color = era) stops at the Expected axis; the VOTE band is drawn by .vote-seg (color = narrative).
+    const lineDims = dimensions.slice(0, dimensions.indexOf("MVP_Share"));
     function path(d) {
-        return lineGenerator(dimensions.map(p => [
+        return lineGenerator(lineDims.map(p => [
             xScale(p),
             d[p] === null ? null : yScales[p](d[p]),
         ]));
@@ -693,7 +694,10 @@ function renderParallelCoordinates(data) {
         .attr("x1", xScale("Expected_Share")).attr("x2", xScale("MVP_Share"))
         .attr("y1", d => yScales.Expected_Share(d.Expected_Share))
         .attr("y2", d => yScales.MVP_Share(d.MVP_Share))
-        .attr("stroke", residualColor);
+        .attr("stroke", residualColor)
+        .on("click", (_event, d) => toggleCandidate(d))
+        .on("mouseenter mousemove", (event, d) => showTooltip(candidateTooltipHtml(d), event))
+        .on("mouseleave", hideTooltip);
 
     const axesG = svg.selectAll(".axis")
         .data(dimensions)
@@ -833,7 +837,7 @@ function renderLineChart(data) {
         { type: "star", fill: COLORS.ink, stroke: "none", opacity: 0.3, text: "MVP outside the selection (faded)" },
         { type: "circle", fill: COLORS.selection, stroke: COLORS.white, radius: SEL_MEAN_R,
           exactCircle: true, text: "Selection mean per season" });
-    if (candidate) legendItems.push({ type: "circle", stroke: COLORS.select, strokeWidth: 2, fill: "none", text: `${candidate.Player} (selected)` });
+    if (candidate) legendItems.push({ type: "circle", stroke: COLORS.select, strokeWidth: 2, fill: "none", text: "Selected player" });
     renderCardLegend("#line-legend", legendItems);
 
     const container = d3.select("#line-chart");
@@ -1221,7 +1225,7 @@ function boundedBar(g, x0, y, h, value, scale) {
     return { bar, out };
 }
 
-function compareBars(panel, rows, faded) {
+function compareBars(panel, rows) {
     const w = panel.node().getBoundingClientRect().width || 260;
     const labelW = 96, barW = w - labelW - 6, rowH = 15;
     const svg = panel.append("svg").attr("width", w).attr("height", rows.length * rowH + 2);
@@ -1232,7 +1236,7 @@ function compareBars(panel, rows, faded) {
         g.append("text").attr("class", "model-label").attr("x", 0).attr("y", 10).text(r.name);
         g.append("rect").attr("class", "bar-track").attr("x", labelW).attr("y", 3).attr("width", barW).attr("height", 9).attr("rx", 1.5);
         const { bar, out } = boundedBar(g, labelW, 3, 9, r.sel, x);
-        bar.attr("fill", COLORS.selection).attr("opacity", faded ? 0.45 : 1);
+        bar.attr("fill", COLORS.selection);
         anyOut = anyOut || out;
         g.append("line").attr("class", "model-ref")
             .attr("x1", labelW + x(r.all)).attr("x2", labelW + x(r.all)).attr("y1", 0).attr("y2", 15);
@@ -1240,6 +1244,8 @@ function compareBars(panel, rows, faded) {
     });
     return anyOut;
 }
+
+const SMALL_SAMPLE_N = 25;
 
 function renderModelPanel(selected, isFiltered) {
     const panel = d3.select("#model-panel");
@@ -1254,6 +1260,11 @@ function renderModelPanel(selected, isFiltered) {
         panel.append("p").attr("class", "panel-note warn").text("n < 6: model cannot be estimated");
         return;
     }
+    // Below SMALL_SAMPLE_N the regression is unstable: an explicit warning is shown.
+    if (model.n < SMALL_SAMPLE_N) {
+        panel.append("p").attr("class", "panel-note warn")
+            .text(`⚠ Small sample (n=${model.n} < ${SMALL_SAMPLE_N}): weights are only indicative`);
+    }
     const collapse = rows => rows.filter(d => d.MVP_Share < 0.10).length / rows.length;
     const coefFmt = v => v.toFixed(3);
     const anyOut = compareBars(panel, [
@@ -1261,9 +1272,9 @@ function renderModelPanel(selected, isFiltered) {
         { name: "Team weight (W%)", sel: model.bW, all: all.bW, max: COEF_SCALE_MAX, fmt: coefFmt },
         { name: "Fit to stats (R²)", sel: model.r2, all: all.r2, max: 1, fmt: fmtPct },
         { name: "Vote share < 10%", sel: collapse(selected), all: collapse(globalData), max: 1, fmt: fmtPct },
-    ], model.n < 25);
+    ]);
     panel.append("p").attr("class", "legend-note")
-        .html(`${swatch(COLORS.selection, "■")} bar = selection · ${swatch(COLORS.all, "<b>|</b>")} = all candidates${model.n < 25 ? " · light bars = small sample" : ""}` +
+        .html(`${swatch(COLORS.selection, "■")} bar = selection · ${swatch(COLORS.all, "<b>|</b>")} = all candidates` +
             `${anyOut ? " · <b>&lt;0</b> = negative weight · <b>›</b> = beyond scale" : ""}`);
 }
 
@@ -1333,32 +1344,34 @@ function renderCandidatePanel(d) {
         .text("✕")
         .on("click", clearCandidateSelection);
     box.append("div").html(
-        `<strong>${d.Player} (${d.Season})</strong>${d.Is_MVP_Winner === 1 ? " ★" : ""}${d.Prev_MVP ? ` <span class="badge">Defending MVP</span>` : ""}` +
-        ` <span class="muted">· ${d.Tactical_Era}</span>`);
+        `<strong>${d.Player} (${d.Season})</strong>${d.Is_MVP_Winner === 1 ? " ★" : ""}${d.Prev_MVP ? ` <span class="badge">Defending MVP</span>` : ""}`);
 
     const exp = Math.max(0, d.Expected_Share);
 
-    // "vote" row: player's expected → actual. "season, expected" row: expected vote of
-    // the same season's candidates, to place the player among rivals.
+    // Row 1: the player's expected → actual vote. Row 2: expected vote of all candidates
+    // of the same season, to place the player among rivals. Each row has a caption above it.
     const w = box.node().getBoundingClientRect().width - 18 || 250;
-    const labelW = 84, plotW = w - labelW - 8;
+    const pad = 6, plotW = w - 2 * pad;
     const x = d3.scaleLinear().domain([0, 1]).range([0, plotW]).clamp(true);
-    const svg = box.append("svg").attr("width", w).attr("height", 64);
-    const g = svg.append("g").attr("transform", `translate(${labelW},0)`);
+    const svg = box.append("svg").attr("width", w).attr("height", 72);
+    const g = svg.append("g").attr("transform", `translate(${pad},0)`);
+    const lastName = d.Player.split(" ").pop();
 
-    const yv = 12;
-    svg.append("text").attr("class", "model-label").attr("x", 0).attr("y", yv + 4).text("vote");
+    const yv = 20;
+    g.append("text").attr("class", "model-label").attr("x", 0).attr("y", 9)
+        .text(`${lastName}: expected → actual vote`);
     g.append("line").attr("class", "bar-track-line").attr("x1", 0).attr("x2", plotW).attr("y1", yv).attr("y2", yv);
     g.append("line").attr("x1", x(exp)).attr("x2", x(d.MVP_Share)).attr("y1", yv).attr("y2", yv)
         .attr("stroke", residualColor(d)).attr("stroke-width", 4);
     g.append("circle").attr("cx", x(exp)).attr("cy", yv).attr("r", 4.5).attr("class", "dot-expected");
     g.append("circle").attr("cx", x(d.MVP_Share)).attr("cy", yv).attr("r", 4.5).attr("fill", residualColor(d));
 
-    const ys = 34;
+    const ys = 51;
     const info = seasonInfo[d.Season];
     const season = globalData.filter(p => p.Season === d.Season);
     const winner = season.find(p => p.Is_MVP_Winner === 1);
-    svg.append("text").attr("class", "model-label").attr("x", 0).attr("y", ys + 4).text("season, expected");
+    g.append("text").attr("class", "model-label").attr("x", 0).attr("y", 40)
+        .text("Expected vote, all candidates of the season");
     g.append("line").attr("class", "bar-track-line").attr("x1", 0).attr("x2", plotW).attr("y1", ys).attr("y2", ys);
     season.forEach(p => {
         if (p.Is_MVP_Winner === 1 || p === d) return;
@@ -1373,27 +1386,23 @@ function renderCandidatePanel(d) {
             .on("click", () => { if (keyOf(winner) !== selectedCandidateKey) selectCandidate(winner); })
             .append("title").text(`${winner.Player}: MVP ${winner.Season} · click for details`);
     }
-    // Selected player: same ring as "Selected candidate" in the main legend, drawn on top, with a direct label.
+    // Selected player: same ring as "Selected candidate" in the main legend, drawn on top.
     if (d.Is_MVP_Winner !== 1) {
-        const px = x(exp);
-        g.append("circle").attr("cx", px).attr("cy", ys).attr("r", 5.5)
+        g.append("circle").attr("cx", x(exp)).attr("cy", ys).attr("r", 5.5)
             .attr("fill", COLORS.white).attr("stroke", SELECT_COLOR).attr("stroke-width", 2.5);
-        g.append("text").attr("class", "player-tag").attr("x", px).attr("y", ys - 9)
-            .attr("text-anchor", px < 20 ? "start" : px > plotW - 20 ? "end" : "middle")
-            .text(d.Player.split(" ").pop());
     }
-    [0, 0.5, 1].forEach(t => g.append("text").attr("class", "tick-mini").attr("x", x(t)).attr("y", 60)
+    [0, 0.5, 1].forEach(t => g.append("text").attr("class", "tick-mini").attr("x", x(t)).attr("y", ys + 17)
         .attr("text-anchor", t === 0 ? "start" : t === 1 ? "end" : "middle").text(fmtPct(t)));
 
     box.append("p").attr("class", "legend-note").html(
-        `○ expected · ${swatch(residualColor(d), "●")} actual · ★ MVP` +
+        `○ expected · ${swatch(residualColor(d), "●")} actual · ★ MVP (expected vote)` +
         `${d.Is_MVP_Winner !== 1 ? " · <b>◯</b> selected player" : ""}` +
         ` · ${swatch(COLORS.context, "●")} other candidates`);
 
     const gap = Math.round(d.Narrative * 100);
     box.append("p").attr("class", "panel-note").html(
-        `<b style="color:${residualColor(d)}">${gap >= 0 ? "+" : "−"}${Math.abs(gap)} points ${gap >= 0 ? "above" : "below"} expected</b>` +
-        ` (${fmtPct(exp)} → ${fmtPct(d.MVP_Share)})`);
+        `Vote share: <b>${fmtPct(d.MVP_Share)}</b> actual vs ${fmtPct(exp)} expected ` +
+        `<b style="color:${residualColor(d)}">(${gap >= 0 ? "+" : "−"}${Math.abs(gap)} percentage points)</b>`);
 
     let verdict;
     if (info.matches) {
@@ -1449,7 +1458,7 @@ function renderPlayerVsWinnersBoxPlot(player) {
 
     renderCardLegend("#boxplot-legend", [
         { type: "rect", fill: ERA_COLORS[era], opacity: 0.6, stroke: COLORS.ink, text: `${era} MVP winners (box)` },
-        { type: "line", color: SELECT_COLOR, width: 1.5, dash: "4,3", text: `${player.Player} (selected)` },
+        { type: "line", color: SELECT_COLOR, width: 1.5, dash: "4,3", text: "Selected player" },
         { type: "circle", text: "Outlier (beyond 1.5×IQR)", radius: 3 },
     ]);
 

@@ -487,6 +487,7 @@ svg text {
 
 .info-box > div:first-of-type {
     padding-right: 20px;
+    padding-bottom: 6px;
 }
 
 .close-candidate:hover {
@@ -628,15 +629,16 @@ svg text {
     vertical-align: middle;
 }
 
+/* Same weight as .polyline: in the VOTE band the line only changes color (era → narrative). */
 .vote-seg {
-    stroke-width: 1.3px;
-    opacity: 0.45;
-    pointer-events: none;
+    stroke-width: 1px;
+    opacity: 0.16;
+    cursor: pointer;
     transition: opacity 0.2s ease;
 }
 .vote-seg.winner {
-    stroke-width: 2.2px;
-    opacity: 0.8;
+    stroke-width: 1.8px;
+    opacity: 0.55;
 }
 .vote-seg.dimmed { opacity: 0.03 !important; }
 .vote-seg.candidate-focus {
@@ -649,7 +651,6 @@ svg text {
 .dot-expected { fill: var(--c-white); stroke: var(--c-ink); stroke-width: 1.5px; }
 .dot-season { fill: var(--c-context); }
 .tick-mini { font-size: 8.5px; fill: var(--c-text-muted); }
-.player-tag { font-size: 9px; font-weight: 700; fill: var(--c-select); paint-order: stroke; stroke: var(--c-bg); stroke-width: 3px; }
 .row-hit { fill: transparent; }
 g.narrative-row { cursor: pointer; }
 g.narrative-row:hover .row-hit { fill: var(--c-bg); }

@@ -37,7 +37,7 @@ Da qui tre grandezze, per ogni candidato o stagione:
 | Grandezza | Definizione | Dove si vede |
 |---|---|---|
 | **Share attesa** (*Expected share*) | voto previsto dal modello | asse *Expected* del PCP, Line Chart (vista iniziale) |
-| **Narrativa** (*Narrative*) | share reale − share attesa | colore del tratto *Expected → Actual* nel PCP (viola = sopra l'atteso, arancione = sotto; legenda *Votes received*), lista *Largest gaps from expected vote* nella sidebar, pannello del giocatore (*"+36 points above expected"*), 4° box del Box Plot (§2ter) |
+| **Narrativa** (*Narrative*) | share reale − share attesa | colore del tratto *Expected → Actual* nel PCP (viola = sopra l'atteso, arancione = sotto; legenda *Votes received*), lista *Largest gaps from expected vote* nella sidebar, pannello del giocatore (*"Vote share: 99% actual vs 63% expected (+36 percentage points)"*), 4° box del Box Plot (§2ter) |
 | **Scelta statistica** (*Statistical pick*) | candidato con la share attesa più alta della stagione | linea tratteggiata nella Line Chart (distanza dalle ★ degli MVP reali), collegamento in PCA al click, verdetto nel pannello del giocatore |
 
 Un **MVP controcorrente** è una stagione in cui ha vinto un candidato diverso
@@ -334,7 +334,7 @@ mostra solo nella demo.
 | 2 | filtrando un'era alla volta, nella sidebar la barra *Merit weight* si allunga da Pre-Analytics a Small-Ball, *Team weight* resta uguale | Box Plot + sidebar |
 | 3 | cliccando un MVP controcorrente, la linea tratteggiata lo collega a una scelta statistica più a destra (da lunghi a guardie); con il brush sulle guardie le ★ piene della Line Chart si concentrano nell'era Transition | PCA + Line Chart |
 | 4 | dopo il brush, i tratti *Expected → Actual* diventano arancioni e cadono verso lo 0 | PCP + sidebar |
-| caso Nash | linea tratteggiata da Nash a Duncan; nel pannello del giocatore *"+65 points above expected"* e il verdetto *MVP over the statistical pick (Tim Duncan)* | PCA + sidebar |
+| caso Nash | linea tratteggiata da Nash a Duncan; nel pannello del giocatore *"Vote share: 84% actual vs 19% expected (+65 percentage points)"* e il verdetto *MVP over the statistical pick (Tim Duncan)* | PCA + sidebar |
 | 2ter | filtrando le ere una alla volta, la mediana del 4° box (narrativa) passa da sopra a sotto quella del box grigio di riferimento, da Pre-Analytics a Small-Ball; con il brush sui lunghi il box sta più in basso che sulle guardie | Box Plot (4° box) |
 
 **S1 — Quando il voto è andato contro le statistiche (Insight 1)**
@@ -343,7 +343,7 @@ mostra solo nella demo.
       prima del 2011-12; dopo, ★ e tratteggio coincidono.
 - [ ] Click su Nash 2004-05 nella PCA (stella in basso a sinistra): la PCA lo
       collega a Duncan; nel pannello del giocatore la riga *vote* va da 19% a
-      84% (*"+65 points above expected"*) e nella riga *season, expected* la ★
+      84% (*"+65 percentage points"*) e nella riga *season, expected* la ★
       di Nash sta a sinistra di molti altri candidati della stagione.
 
 **S2 — Come votano le ere (Insight 2)**
@@ -401,8 +401,8 @@ mostra solo nella demo.
 
 **S5 — Il superteam (Insight 6)**
 - [ ] Sidebar, lista *Largest gaps from expected vote*, barre arancioni:
-      Durant 16-17; click → pannello del giocatore *"−48 points below
-      expected"*.
+      Durant 16-17; click → pannello del giocatore *"Vote share: 0% actual vs
+      48% expected (−48 percentage points)"*.
 
 **Facoltativo — regressione on demand**
 - [ ] Click sull'etichetta *PIE* nel PCP, poi brush sulla timeline 2011–2023:
@@ -429,7 +429,7 @@ mostra solo nella demo.
    entrambe le stelle sono candidate (vero per Curry e Durant nel 2016-17; non
    per Westbrook e George nel 2017-18).
 5. **Campioni piccoli.** Con selezioni sotto i 25 candidati la dashboard
-   schiarisce le barre del modello (*"light bars = small sample"*); sotto i 6
+   mostra l'avviso *"⚠ Small sample (n < 25): weights are only indicative"*; sotto i 6
    candidati il modello non viene stimato. Nella Line Chart la media della
    selezione è mostrata solo per le stagioni con almeno 2 candidati. Le differenze tra ere dell'Insight 2
    sono accompagnate da intervalli bootstrap; la crescita della share attesa
