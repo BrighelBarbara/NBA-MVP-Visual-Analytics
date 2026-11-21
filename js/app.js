@@ -227,7 +227,7 @@ function setupExpandableCards() {
 }
 
 const DESELECT_CARDS = ["pca-card", "pcp-card", "line-card", "boxplot-card"];
-const NO_CLEAR_TARGETS = ".brush, .polyline, .vote-seg, .axis-label, .legend, .era-box, .share-box, .box-outlier, .winner-star, .selection-dot, a, button";
+const NO_CLEAR_TARGETS = ".brush, .polyline, .vote-seg, .axis-label, .legend, .era-box, .share-box, .box-outlier, .winner-star, a, button";
 
 function clearBrushes(root) {
     root.selectAll(".brush").each(function() {
@@ -355,7 +355,7 @@ const LEGEND_R = 4.5;
 let shareSizeScale;
 const SHARE_BINS = [0.05, 0.25, 0.5, 0.75];   // 5 intervalli di share
 const SHARE_R_MIN = 2.5;
-const SHARE_R_MAX = 10;
+const SHARE_R_MAX = 8.5;
 function shareRadius(v) {
     return Number.isFinite(v) ? shareSizeScale(v) : SHARE_R_MIN;
 }
@@ -411,7 +411,8 @@ function renderCardLegend(target, items) {
                 .attr("d", d3.symbol().type(type).size(size)())
                 .attr("fill", item.fill || COLORS.white)
                 .attr("stroke", item.stroke || COLORS.ink)
-                .attr("stroke-width", item.strokeWidth ?? 1);
+                .attr("stroke-width", item.strokeWidth ?? 1)
+                .attr("opacity", item.opacity ?? 1);
         } else if (item.type === "rect") {
             icon.append("rect").attr("x", 2).attr("y", 2).attr("width", 10).attr("height", 10).attr("rx", 1.5)
                 .attr("fill", item.fill).attr("fill-opacity", item.opacity ?? 1)
@@ -511,13 +512,14 @@ function renderPCAScatterplot(data) {
         .domain(d3.extent(data, d => d.PC2)).nice()
         .range([height, 0]);
 
-    // Stella (MVP) e cerchio hanno lo stesso RAGGIO (ingombro) a parità di intervallo:
-    // la punta della stella arriva dove arriva il bordo del cerchio.
+    // La dimensione codifica la share con l'AREA (vedi legenda): stella (MVP) e cerchio
+    // hanno la stessa area a parità di intervallo (d3.symbol().size è un'area), così una
+    // stella non appare più piccola di un cerchio con share minore.
     const symbolGenerator = d3.symbol()
         .type(d => d.Is_MVP_Winner === 1 ? d3.symbolStar : d3.symbolCircle)
         .size(d => {
             const r = shareRadius(d.MVP_Share);
-            return d.Is_MVP_Winner === 1 ? (r * r) / STAR_KA : Math.PI * r * r;
+            return Math.PI * r * r;
         });
 
     svg.append("g")
@@ -855,16 +857,22 @@ function renderLineChart(data) {
     const choiceMode = metric === "Expected_Share";
     const hasLeague = leagueAverages[seasonsSorted[0]][metric] !== undefined;
     const refLabel = choiceMode ? "scelta statistica" : hasLeague ? "media di lega" : "media dei candidati";
-    d3.select("#linechart-title").text(`${label(metric)}: MVP reale vs ${refLabel}`);
-
     const filtered = data.length !== globalData.length;
+    // Coordinamento con la PCA: le stelle degli MVP dentro la selezione restano piene,
+    // le altre si sbiadiscono; il contatore dice quanti MVP hanno il profilo selezionato.
+    const selectedKeys = new Set(data.map(keyOf));
+    const inSelection = rec => !filtered || selectedKeys.has(keyOf(rec));
+    const mvpTotal = globalData.filter(d => d.Is_MVP_Winner === 1).length;
+    const mvpIn = data.filter(d => d.Is_MVP_Winner === 1).length;
+    d3.select("#linechart-title").text(`${label(metric)}: MVP reale vs ${refLabel}` +
+        (filtered ? ` · MVP nella selezione: ${mvpIn}/${mvpTotal}` : ""));
     const candidate = selectedCandidateKey && globalData.find(d => keyOf(d) === selectedCandidateKey);
     const legendItems = [
         { type: "eras" },
         { type: "line", cls: "series-winner", star: true, text: "MVP reale" },
         { type: "line", cls: "series-reference", text: refLabel.charAt(0).toUpperCase() + refLabel.slice(1) },
     ];
-    if (filtered) legendItems.push({ type: "circle", fill: COLORS.selection, stroke: COLORS.white, radius: 3.5, text: "Candidati selezionati (click = dettaglio)" });
+    if (filtered) legendItems.push({ type: "star", fill: COLORS.ink, stroke: "none", opacity: 0.3, text: "MVP fuori dalla selezione (sbiadita)" });
     if (candidate) legendItems.push({ type: "circle", stroke: COLORS.select, strokeWidth: 2, fill: "none", text: `${candidate.Player} (selezionato)` });
     renderCardLegend("#line-legend", legendItems);
 
@@ -889,10 +897,7 @@ function renderLineChart(data) {
                 : d3.mean(globalData.filter(d => d.Season === season), d => d[metric]),
     }));
     const valid = v => v !== null && v !== undefined && !Number.isNaN(v);
-    // Selezione: un punto per candidato (non una media per stagione: con brush mirati
-    // restano 1-2 candidati per stagione e la media sarebbe solo rumore).
-    const selection = filtered ? data.filter(d => valid(d[metric]) && d.Is_MVP_Winner !== 1) : [];
-    const allValues = [...winners, ...reference].map(p => p.value).concat(selection.map(d => d[metric])).filter(valid);
+    const allValues = [...winners, ...reference].map(p => p.value).filter(valid);
     if (candidate && valid(candidate[metric])) allValues.push(candidate[metric]);
     if (allValues.length < 2) {
         container.append("p").attr("class", "card-desc").text("Dati insufficienti per questa statistica.");
@@ -985,13 +990,8 @@ function renderLineChart(data) {
         .on("mouseenter mousemove", (event, d) => showTooltip(candidateTooltipHtml(rec(d)), event))
         .on("mouseleave", hideTooltip);
 
-    bindCandidate(marks.selectAll(".selection-dot")
-        .data(selection)
-        .enter().append("circle")
-        .attr("class", "selection-dot")
-        .attr("cx", d => xScale(d.Season)).attr("cy", d => yScale(d[metric])).attr("r", 3), d => d);
 
-    const star = d3.symbol().type(d3.symbolStar).size(55);
+    const star = d3.symbol().type(d3.symbolStar).size(85);
     bindCandidate(marks.selectAll(".winner-star")
         .data(winners.filter(p => valid(p.value)))
         .enter().append("path")
@@ -999,14 +999,15 @@ function renderLineChart(data) {
         .attr("transform", p => `translate(${xScale(p.season)},${yScale(p.value)})`)
         .attr("d", star)
         .attr("fill", p => ERA_COLORS[p.record.Tactical_Era])
-        .attr("stroke", COLORS.white).attr("stroke-width", 0.6), p => p.record);
+        .attr("stroke", COLORS.white).attr("stroke-width", 0.8)
+        .classed("out-of-selection", p => !inSelection(p.record)), p => p.record);
 
     if (hasCandidate) {
         const cx = xScale(candidate.Season), cy = yScale(candidate[metric]);
-        marks.append("circle").attr("class", "candidate-ring").attr("cx", cx).attr("cy", cy).attr("r", 7)
+        marks.append("circle").attr("class", "candidate-ring").attr("cx", cx).attr("cy", cy).attr("r", 8.5)
             .attr("fill", "none").attr("stroke", SELECT_COLOR).attr("stroke-width", 2);
         marks.append("text")
-            .attr("x", cx + (cx > width * 0.75 ? -7 : 7)).attr("y", cy - 7)
+            .attr("x", cx + (cx > width * 0.75 ? -9 : 9)).attr("y", cy - 9)
             .attr("text-anchor", cx > width * 0.75 ? "end" : "start")
             .attr("class", "direct-label")
             .text(`${candidate.Player} (${formatMetric(metric, candidate[metric])})`);
@@ -1392,7 +1393,7 @@ function renderCandidatePanel(d) {
     g.append("line").attr("class", "bar-track-line").attr("x1", 0).attr("x2", plotW).attr("y1", ys).attr("y2", ys);
     season.forEach(p => {
         if (p.Is_MVP_Winner === 1) return;
-        g.append("circle").attr("cx", x(Math.max(0, p.Expected_Share))).attr("cy", ys).attr("r", 2.6)
+        g.append("circle").attr("cx", x(Math.max(0, p.Expected_Share))).attr("cy", ys).attr("r", 3.2)
             .attr("class", "dot-season").append("title").text(`${p.Player}: attesa ${fmtPct(Math.max(0, p.Expected_Share))}`);
     });
     const choice = season.find(p => p.Player === info.statistical_choice);
@@ -1406,7 +1407,7 @@ function renderCandidatePanel(d) {
     if (winner) {
         g.append("path").attr("class", "winner-star")
             .attr("transform", `translate(${x(Math.max(0, winner.Expected_Share))},${ys})`)
-            .attr("d", d3.symbol().type(d3.symbolStar).size(80)())
+            .attr("d", d3.symbol().type(d3.symbolStar).size(110)())
             .attr("fill", ERA_COLORS[winner.Tactical_Era]).attr("stroke", COLORS.white).attr("stroke-width", 0.7)
             .on("click", () => { if (keyOf(winner) !== selectedCandidateKey) selectCandidate(winner); })
             .append("title").text(`${winner.Player}: MVP ${winner.Season} · click per il dettaglio`);

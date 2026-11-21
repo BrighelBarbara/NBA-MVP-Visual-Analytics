@@ -392,7 +392,7 @@ esadecimale scritto a mano resta in CSS o JS (eccetto le ombre). Ogni colore ha 
 |---|---|
 | Tableau10[0,4,8] blu/verde/marrone | era tattica (categorica) |
 | PuOr[9] viola / arancione | narrativa: voto reale sopra / sotto l'atteso (divergente, zero al centro) |
-| Tableau10[3] teal | selezione corrente (brush, punti dei candidati selezionati nel line chart, 4° box, barre del modello) |
+| Tableau10[3] teal | selezione corrente (brush, 4° box, barre del modello) |
 | Greys[8] nero | candidato selezionato con il click |
 | Greys[6] | serie "MVP reale" nel line chart |
 | Greys[5] | altri candidati della stessa stagione (pannello candidato) |
@@ -415,11 +415,14 @@ Correzioni principali:
   `.model-value`, `.model-axis-note`, `.narrative-head`, `.info-box .verdict`); corretto il
   selettore `.panel-note.warn`, che prima non veniva applicato.
 
-### Line chart: "media selezione" sostituita dai candidati selezionati
+### Line chart: "media selezione" sostituita dallo stato delle stelle MVP
 La media per stagione dei candidati selezionati è stata rimossa: con brush mirati sulla
 PCA (es. guardie ad alto volume, PC1 < 0 e PC2 > 1) restano in mediana 2 candidati per
-stagione, con stagioni a 1 solo candidato e stagioni vuote, quindi la "media" era rumore
-e la linea aveva buchi. Ora ogni candidato selezionato è un punto teal sulla sua stagione:
-si vede chi della selezione arriva al livello della ★ dell'MVP. Punti e ★ sono cliccabili
-(dettaglio del candidato, coordinato con PCA, PCP, box plot e sidebar), così il line chart
-è coordinato in entrambe le direzioni. Anche la ★ dell'MVP nel pannello candidato è cliccabile.
+stagione, con stagioni a 1 solo candidato e stagioni vuote, quindi la "media" era rumore.
+Anche un punto per ogni candidato selezionato è stato scartato (troppi punti sparsi).
+Ora il line chart non aggiunge segni: le ★ degli MVP che cadono nella selezione restano
+piene, le altre si sbiadiscono, e il titolo riporta "MVP nella selezione: x/27". Il line
+chart diventa la vista temporale della PCA: mostra *quando* vince un certo profilo.
+Esempio (brush su PC1 < 0, profilo da guardia): MVP guardie 3/9 in Pre-Analytics,
+10/11 in Transition, 4/7 in Small-Ball. Le ★ sono cliccabili (dettaglio del candidato,
+coordinato con PCA, PCP, box plot e sidebar); anche la ★ del pannello candidato lo è.

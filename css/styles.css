@@ -578,20 +578,19 @@ svg text {
     pointer-events: none;
 }
 
-.selection-dot {
-    fill: var(--c-selection);
-    fill-opacity: 0.8;
-    stroke: var(--c-white);
-    stroke-width: 0.5px;
-    cursor: pointer;
-}
-
 .winner-star {
     cursor: pointer;
 }
 
-.winner-star:hover,
-.selection-dot:hover {
+.winner-star.out-of-selection {
+    opacity: 0.25;
+}
+
+.winner-star.out-of-selection:hover {
+    opacity: 1;
+}
+
+.winner-star:hover {
     stroke: var(--c-ink);
     stroke-width: 1.5px;
 }
