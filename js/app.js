@@ -448,15 +448,12 @@ function renderLegend() {
         { type: "eras" },
         { type: "star", text: "MVP reale (colore = era)", shared: true },
         { type: "circle", text: "Selezionato", stroke: COLORS.select, strokeWidth: 2.5, shared: true },
-        { type: "line", color: COLORS.ink, width: 1, dash: "2,2", text: "PC1 = 0" },
         { type: "sizes", heading: "Area = share voto MVP (% punti ricevuti):",
           scale: shareSizeScale, labels: shareClassLabels() },
     ]);
     renderCardLegend("#pcp-legend", [
         { type: "eras" },
         { type: "line", color: COLORS.ink, width: 2.5, text: "MVP reale (spessa, colore = era)" },
-        { type: "line", color: RESIDUAL_COLORS.positive, width: 2.5, text: "Voto reale > atteso" },
-        { type: "line", color: RESIDUAL_COLORS.negative, width: 2.5, text: "Voto reale < atteso" },
         { type: "line", color: COLORS.ink, width: 4, text: "Selezionato (le altre sbiadiscono)" },
     ]);
 }
