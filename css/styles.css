@@ -236,7 +236,8 @@ svg text {
 .brush .selection {
     fill: var(--c-selection);
     fill-opacity: 0.15;
-    stroke: var(--c-selection);
+    stroke: black;
+    /*stroke: var(--c-selection);*/
     stroke-dasharray: 4;
 }
 
